@@ -1,6 +1,9 @@
+# This version is: E
+
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
-bypass_net = 0 # Caso SIM, ignorar configurações de rede
+bypass_net = 1 # Caso SIM, ignorar configurações de rede
+acopladois = 0 # Caso SIM, o app inicia "acoplado" ao SIM
 
 
 import tkinter
@@ -57,7 +60,7 @@ window.geometry("950x550")
 
 
 bypass_sim_tkbo = tkinter.BooleanVar(value=(bypass_sim != 0))  # Use BooleanVar to control the Checkbutton state
-acoplado = tkinter.BooleanVar(value=True)
+acoplado = tkinter.BooleanVar(value= True if acopladois == 1 else False)
 
 # Variaveis python de estado da botoneira
 var_alt = 0
@@ -109,54 +112,66 @@ texto_bateria_tkst = tkinter.StringVar()
 # VARIAVEIS DE RADIO
 
 # Variáveis comm1
-com1_active_int = tkinter.IntVar(value=240)  # Valor inicial da parte inteira ativa
-com1_active_dec = tkinter.IntVar(value=240)   # Valor inicial da parte decimal ativa
+com1_active_int = tkinter.IntVar(value=118)  # Valor inicial da parte inteira ativa
+com1_active_dec = tkinter.IntVar(value=400)   # Valor inicial da parte decimal ativa
 
-com1_standby_int = tkinter.IntVar(value=120)  # Valor inicial da parte inteira standby
-com1_standby_dec = tkinter.IntVar(value=300)   # Valor inicial da parte decimal standby
+com1_standb_int = tkinter.IntVar(value=119)  # Valor inicial da parte inteira standby
+com1_standb_dec = tkinter.IntVar(value=500)   # Valor inicial da parte decimal standby
 
-com1_active_text = tkinter.StringVar(value=121.510)
-com1_cached_text = tkinter.StringVar()
-com1_standb_text = tkinter.StringVar()
+com1_cached_int = tkinter.IntVar()
+com1_cached_dec = tkinter.IntVar()
 
+com1_active_txt = tkinter.StringVar(value=121.510)
+com1_standb_txt = tkinter.StringVar()
+com1_cached_txt = tkinter.StringVar()
 
 
 
 # Variáveis nav1
-nav1_standby_int = tkinter.IntVar(value=500)  # Valor inicial da parte inteira standby
-nav1_standby_dec = tkinter.IntVar(value=50)   # Valor inicial da parte decimal standby
+nav1_standb_int = tkinter.IntVar(value=500)  # Valor inicial da parte inteira standby
+nav1_standb_dec = tkinter.IntVar(value=50)   # Valor inicial da parte decimal standby
 
 nav1_active_int = tkinter.IntVar(value=524)  # Valor inicial da parte inteira ativa
 nav1_active_dec = tkinter.IntVar(value=24)   # Valor inicial da parte decimal ativa
 
-nav1_standby_text = tkinter.StringVar()
-nav1_active_text = 900.01
+nav1_cached_int = tkinter.IntVar()
+nav1_cached_dec = tkinter.IntVar()
+
+nav1_active_txt = tkinter.StringVar(value=900.10)
+nav1_standb_txt = tkinter.StringVar()
+nav1_cached_txt = tkinter.StringVar()
 
 
 
 # Variáveis comm2
-com2_standby_int = tkinter.IntVar(value=565)  # Valor inicial da parte inteira standby
-
-com2_standby_dec = tkinter.IntVar(value=560)   # Valor inicial da parte decimal standby
+com2_standb_int = tkinter.IntVar(value=565)  # Valor inicial da parte inteira standby
+com2_standb_dec = tkinter.IntVar(value=560)   # Valor inicial da parte decimal standby
 
 com2_active_int = tkinter.IntVar(value=810)  # Valor inicial da parte inteira ativa
 com2_active_dec = tkinter.IntVar(value=810)   # Valor inicial da parte decimal ativa
 
-com2_standby_text = tkinter.StringVar()
-com2_active_text = 300.020
+com2_cached_int = tkinter.IntVar()
+com2_cached_dec = tkinter.IntVar()
+
+com2_active_txt = tkinter.StringVar(value=121.510)
+com2_standb_txt = tkinter.StringVar()
+com2_cached_txt = tkinter.StringVar()
 
 
 
 # Variáveis nav2
-nav2_standby_int = tkinter.IntVar(value=121)  # Valor inicial da parte inteira standby
-nav2_standby_dec = tkinter.IntVar(value=12)   # Valor inicial da parte decimal standby
+nav2_standb_int = tkinter.IntVar(value=121)  # Valor inicial da parte inteira standby
+nav2_standb_dec = tkinter.IntVar(value=12)   # Valor inicial da parte decimal standby
 
 nav2_active_int = tkinter.IntVar(value=800)  # Valor inicial da parte inteira ativa
 nav2_active_dec = tkinter.IntVar(value=80)   # Valor inicial da parte decimal ativa
 
-nav2_standby_text = tkinter.StringVar()
-nav2_active_text = 900.02
+nav2_cached_int = tkinter.IntVar()
+nav2_cached_dec = tkinter.IntVar()
 
+nav2_active_txt = tkinter.StringVar(value=900.10)
+nav2_standb_txt = tkinter.StringVar()
+nav2_cached_txt = tkinter.StringVar()
 
 
 
@@ -189,17 +204,7 @@ class botao_swap(tkinter.Button):
     def __init__(self, master=None, **kwargs):
         tkinter.Button.__init__(self, master, **kwargs)
         self.configure( text="<-->", bg="white", fg="black", font=("verdana", 6))
-        self.bind("<Button-1>", self.clicou_swap)
-    
-    def clicou_swap(self, event):
-        print("clicou swap - class")
-        
-        com1_cached_text.set(com1_active_text.get())
-        com1_active_text.set(com1_standb_text.get())
-        com1_standb_text.set(com1_cached_text.get())
-        
-        event_to_trigger = ae.find("COM_STBY_RADIO_SWAP")
-        event_to_trigger()
+
         
         
 # NOVOS botoes seletora de frequencia 
@@ -270,7 +275,7 @@ class botaopreto(tkinter.Button):
         if self.botaoesta == 0:
             self.config(bg='black', fg='white')
         else:
-            self.config(bg='gray', fg='white')
+            self.config(bg='#525754', fg='#0ceb47')
 
     def alternabotaoesta(self):
         print("alternabotaoesta foi rodado")
@@ -280,7 +285,7 @@ class botaopreto(tkinter.Button):
         if self.botaoesta == 0:
             self.config(bg='black', fg='white')
         else:
-            self.config(bg='gray', fg='white')
+            self.config(bg='#525754', fg='#0ceb47')
 
 
 
@@ -295,7 +300,7 @@ class botaogrand(tkinter.Button):
         if self.botaoesta == 0:
             self.config(bg='black', fg='red')
         else:
-            self.config(bg='gray', fg='green')
+            self.config(bg='#525754', fg='#0ceb47')
 
     def alternabotaoesta(self):
         print("alternabotaoesta foi rodado")
@@ -305,7 +310,7 @@ class botaogrand(tkinter.Button):
         if self.botaoesta == 0:
             self.config(bg='black', fg='red')
         else:
-            self.config(bg='gray', fg='green')
+            self.config(bg='#525754', fg='#0ceb47')
 
 
 
@@ -491,11 +496,20 @@ def onclick_testerdelta():
 def update_display():
     print("rodou update display")
     
-    #com1_active_text.set(f"{active_int.get():03d}.{active_dec.get():02d}")
-    com1_standb_text.set(f"{com1_standby_int.get():03d}.{com1_standby_dec.get():03d}")
-    nav1_standby_text.set(f"{nav1_standby_int.get():03d}.{nav1_standby_dec.get():02d}")
-    com2_standby_text.set(f"{com2_standby_int.get():03d}.{com2_standby_dec.get():03d}")
-    nav2_standby_text.set(f"{nav2_standby_int.get():03d}.{nav2_standby_dec.get():02d}")
+    com1_active_txt.set(f"{com1_active_int.get():03d}.{com1_active_dec.get():03d}")
+    com1_standb_txt.set(f"{com1_standb_int.get():03d}.{com1_standb_dec.get():03d}")
+    
+    nav1_active_txt.set(f"{nav1_active_int.get():03d}.{nav1_active_dec.get():02d}")
+    nav1_standb_txt.set(f"{nav1_standb_int.get():03d}.{nav1_standb_dec.get():02d}")
+    
+    com2_active_txt.set(f"{com2_active_int.get():03d}.{com2_active_dec.get():03d}")
+    com2_standb_txt.set(f"{com2_standb_int.get():03d}.{com2_standb_dec.get():03d}")
+
+    nav2_active_txt.set(f"{nav2_active_int.get():03d}.{nav2_active_dec.get():02d}")
+    nav2_standb_txt.set(f"{nav2_standb_int.get():03d}.{nav2_standb_dec.get():02d}")
+    
+    #com2_standb_txt.set(f"{com2_standb_int.get():03d}.{com2_standb_dec.get():03d}")
+    #nav2_standb_txt.set(f"{nav2_standb_int.get():03d}.{nav2_standb_dec.get():02d}")
 
 def clicou_intdec(botao):
     print("clicou intdec")
@@ -507,29 +521,29 @@ def clicou_intdec(botao):
     
     
 def clicoubotao_a_nogrupo_01():
-    com1_standby_int.set((com1_standby_int.get() - 1) if com1_standby_int.get() != 118 else 136)
+    com1_standb_int.set((com1_standb_int.get() - 1) if com1_standb_int.get() != 118 else 136)
     update_display()
     if acoplado:
         send_data("COM_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_01():
-    com1_standby_int.set((com1_standby_int.get() + 1) if com1_standby_int.get() != 136 else 118)
+    com1_standb_int.set((com1_standb_int.get() + 1) if com1_standb_int.get() != 136 else 118)
     update_display()
     if acoplado:
         send_data("COM_RADIO_WHOLE_INC")
         
 def clicoubotao_c_nogrupo_01():
-    numero_atual = com1_standby_dec.get() # decrementa o decimal da frequencia standby
+    numero_atual = com1_standb_dec.get() # decrementa o decimal da frequencia standby
     novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 1000
-    com1_standby_dec.set(novo_numero)
+    com1_standb_dec.set(novo_numero)
     update_display()
     if acoplado:
         send_data("COM_RADIO_FRACT_DEC")
             
 def clicoubotao_d_nogrupo_01():
-    numero_atual = com1_standby_dec.get() # incrementa o decimal da frequencia standby
+    numero_atual = com1_standb_dec.get() # incrementa o decimal da frequencia standby
     novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 1000
-    com1_standby_dec.set(novo_numero)
+    com1_standb_dec.set(novo_numero)
     update_display()
     if acoplado:
         send_data("COM_RADIO_FRACT_INC")
@@ -541,16 +555,36 @@ def clicoubotao_d_nogrupo_01():
 
 
 def clicoubotao_a_nogrupo_02():
-    print("clicou botao a no grupo 02")
+    nav1_standb_int.set((nav1_standb_int.get() - 1) if nav1_standb_int.get() != 108 else 118)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_02():
-    print("clicou botao b no grupo 02")    
-
+    nav1_standb_int.set((nav1_standb_int.get() + 1) if nav1_standb_int.get() != 118 else 108)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_WHOLE_INC")
+        
 def clicoubotao_c_nogrupo_02():
-    print("clicou botao c no grupo 02")
-
+    numero_atual = nav1_standb_dec.get() # decrementa o decimal da frequencia standby
+    novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 100
+    nav1_standb_dec.set(novo_numero)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_FRACT_DEC")
+            
 def clicoubotao_d_nogrupo_02():
-    print("clicou botao d no grupo 02")  
+    numero_atual = nav1_standb_dec.get() # incrementa o decimal da frequencia standby
+    novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 100
+    nav1_standb_dec.set(novo_numero)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_FRACT_INC")
+
+
+
+
 
 
 
@@ -558,19 +592,32 @@ def clicoubotao_d_nogrupo_02():
 
 
 def clicoubotao_a_nogrupo_03():
-    print("clicou botao a no grupo 03")
+    com2_standb_int.set((com2_standb_int.get() - 1) if com2_standb_int.get() != 118 else 136)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_03():
-    print("clicou botao b no grupo 03")    
-
+    com2_standb_int.set((com2_standb_int.get() + 1) if com2_standb_int.get() != 136 else 118)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_WHOLE_INC")
+        
 def clicoubotao_c_nogrupo_03():
-    print("clicou botao c no grupo 03")
-
+    numero_atual = com2_standb_dec.get() # decrementa o decimal da frequencia standby
+    novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 1000
+    com2_standb_dec.set(novo_numero)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_FRACT_DEC")
+            
 def clicoubotao_d_nogrupo_03():
-    print("clicou botao d no grupo 03")  
-
-
-
+    numero_atual = com2_standb_dec.get() # incrementa o decimal da frequencia standby
+    novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 1000
+    com2_standb_dec.set(novo_numero)
+    update_display()
+    if acoplado:
+        send_data("COM_RADIO_FRACT_INC")
 
 
 def clicoubotao_a_nogrupo_04():
@@ -588,6 +635,100 @@ def clicoubotao_d_nogrupo_04():
 
 
 
+
+# funções do botão swap com 1    
+def clicou_swap_com1():
+    print("clicou swap com 1")
+    
+    # Cached pega as var do Active
+    com1_cached_int.set(com1_active_int.get())
+    com1_cached_dec.set(com1_active_dec.get())
+    com1_cached_txt.set(com1_active_txt.get())
+
+    # Active pega as var do StandBY
+    com1_active_int.set(com1_standb_int.get())
+    com1_active_dec.set(com1_standb_dec.get())
+    com1_active_txt.set(com1_standb_txt.get())
+
+    # Standby pega as var do Cached
+    com1_standb_int.set(com1_cached_int.get())
+    com1_standb_dec.set(com1_cached_dec.get())
+    com1_standb_txt.set(com1_cached_txt.get())
+
+    
+    if acoplado:
+        send_data("COM_STBY_RADIO_SWAP")    
+
+# funções do botão swap nav 2 
+def clicou_swap_nav1():
+    print("clicou swap com 1")
+    
+    # Cached pega as var do Active
+    nav1_cached_int.set(nav1_active_int.get())
+    nav1_cached_dec.set(nav1_active_dec.get())
+    nav1_cached_txt.set(nav1_active_txt.get())
+
+    # Active pega as var do StandBY
+    nav1_active_int.set(nav1_standb_int.get())
+    nav1_active_dec.set(nav1_standb_dec.get())
+    nav1_active_txt.set(nav1_standb_txt.get())
+
+    # Standby pega as var do Cached
+    nav1_standb_int.set(nav1_cached_int.get())
+    nav1_standb_dec.set(nav1_cached_dec.get())
+    nav1_standb_txt.set(nav1_cached_txt.get())
+
+    
+    if acoplado:
+        send_data("COM_STBY_RADIO_SWAP")        
+
+
+
+# funções do botão swap com  2 
+def clicou_swap_com2():
+    print("clicou swap com 2")
+    
+    # Cached pega as var do Active
+    com2_cached_int.set(com2_active_int.get())
+    com2_cached_dec.set(com2_active_dec.get())
+    com2_cached_txt.set(com2_active_txt.get())
+
+    # Active pega as var do StandBY
+    com2_active_int.set(com2_standb_int.get())
+    com2_active_dec.set(com2_standb_dec.get())
+    com2_active_txt.set(com2_standb_txt.get())
+
+    # Standby pega as var do Cached
+    com2_standb_int.set(com2_cached_int.get())
+    com2_standb_dec.set(com2_cached_dec.get())
+    com2_standb_txt.set(com2_cached_txt.get())
+
+    
+    if acoplado:
+        send_data("COM_STBY_RADIO_SWAP")                
+
+# funções do botão swap nav  2 
+def clicou_swap_nav2():
+    print("clicou swap com 2")
+    
+    # Cached pega as var do Active
+    nav2_cached_int.set(nav2_active_int.get())
+    nav2_cached_dec.set(nav2_active_dec.get())
+    nav2_cached_txt.set(nav2_active_txt.get())
+
+    # Active pega as var do StandBY
+    nav2_active_int.set(nav2_standb_int.get())
+    nav2_active_dec.set(nav2_standb_dec.get())
+    nav2_active_txt.set(nav2_standb_txt.get())
+
+    # Standby pega as var do Cached
+    nav2_standb_int.set(nav2_cached_int.get())
+    nav2_standb_dec.set(nav2_cached_dec.get())
+    nav2_standb_txt.set(nav2_cached_txt.get())
+
+    
+    if acoplado:
+        send_data("COM_STBY_RADIO_SWAP")                
 
 
 #################### funções na botoneira
@@ -866,7 +1007,7 @@ var_info_frame.grid(row=0, column=3,  sticky="news")
 
 
 # criar campo de texto atualizavel - var info
-com1_active_int_label = tkinter.Label(var_info_frame, textvariable=com1_active_text)
+com1_active_int_label = tkinter.Label(var_info_frame, textvariable=com1_active_txt)
 
 
 
@@ -1003,6 +1144,15 @@ aj_compass_label.grid(row=0, column=0)
 aj_compass_spin = tkinter.Spinbox(knobs_frame, from_=1, to=360, width=10)
 aj_compass_spin.grid(row=1, column=0)
 
+sca_pan = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
+sca_pan.grid(row=2, column=0)
+sca_rad = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
+sca_rad.grid(row=3, column=0)
+
+
+
+
+
 
 
 # pading para os itens do knobs frame
@@ -1044,24 +1194,24 @@ radio_01_frame.grid(row=0, column=0)
 com1_active_frame = radiolabelframe(radio_01_frame, text="Comm 01 - Active")
 com1_active_frame.grid(row=0, column=0)
 
-actived_display = radiodisplay(com1_active_frame, textvariable=com1_active_text)
+actived_display = radiodisplay(com1_active_frame, textvariable=com1_active_txt)
 actived_display.grid(row=0, column=0)
 
 com1_swap_button = botao_swap(com1_active_frame)
 com1_swap_button.grid(row=1, column=0)
 
 # Frame - comm 1 - standby
-com1_standby_frame = radiolabelframe(radio_01_frame, text="Comm 01 - StandBy")
-com1_standby_frame.grid(row=0, column=1)
+com1_standb_frame = radiolabelframe(radio_01_frame, text="Comm 01 - StandBy")
+com1_standb_frame.grid(row=0, column=1)
 
-com1_standby_display = radiodisplay(com1_standby_frame, textvariable=com1_standb_text)
-com1_standby_display.grid(row=0, column=0)
+com1_standb_display = radiodisplay(com1_standb_frame, textvariable=com1_standb_txt)
+com1_standb_display.grid(row=0, column=0)
 
-com1_standby_buttons_frame = tkinter.Frame(com1_standby_frame, bg="black")
-com1_standby_buttons_frame.grid(row=1, column=0)
+com1_standb_buttons_frame = tkinter.Frame(com1_standb_frame, bg="black")
+com1_standb_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância do grupo de botões
-instancia_02_do_grupo = ogrupodebotoes(com1_standby_buttons_frame)
+instancia_02_do_grupo = ogrupodebotoes(com1_standb_buttons_frame)
 instancia_02_do_grupo.botaoa.config(command=clicoubotao_a_nogrupo_01)
 instancia_02_do_grupo.botaob.config(command=clicoubotao_b_nogrupo_01)
 instancia_02_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_01)
@@ -1075,22 +1225,21 @@ instancia_02_do_grupo.botaod.config(command=clicoubotao_d_nogrupo_01)
 
 
 
-
 # Frame - nav1 - active
 nav1_act_fr = radiolabelframe(radio_01_frame, text="Nav 01 - Active")
 nav1_act_fr.grid(row=0, column=2)
 
-nav1_act_disp = radiodisplay(nav1_act_fr, text=nav1_active_text)
+nav1_act_disp = radiodisplay(nav1_act_fr, textvariable=nav1_active_txt)
 nav1_act_disp.grid(row=0, column=0)
 
-swap_button = botao_swap(nav1_act_fr)
-swap_button.grid(row=1, column=0)
+nav1_swap_button = botao_swap(nav1_act_fr)
+nav1_swap_button.grid(row=1, column=0)
 
 # Frame - nav1 - standby
 nav1_standby_frame = radiolabelframe(radio_01_frame, text="Nav 01 - StandBy")
 nav1_standby_frame.grid(row=0, column=3)
 
-nav1_standby_display = radiodisplay(nav1_standby_frame, textvariable=nav1_standby_text)
+nav1_standby_display = radiodisplay(nav1_standby_frame, textvariable=nav1_standb_txt)
 nav1_standby_display.grid(row=0, column=0)
 
 nav1_standby_buttons_frame = tkinter.Frame(nav1_standby_frame, bg="black")
@@ -1123,7 +1272,7 @@ radio_02_frame.grid(row=1, column=0)
 com2_active_frame = radiolabelframe(radio_02_frame, text="Comm 02 - Active")
 com2_active_frame.grid(row=0, column=0)
 
-actived_display = radiodisplay(com2_active_frame, text=com2_active_text)
+actived_display = radiodisplay(com2_active_frame, textvariable=com2_active_txt)
 actived_display.grid(row=0, column=0)
 
 com2_swap_button = botao_swap(com2_active_frame)
@@ -1133,7 +1282,7 @@ com2_swap_button.grid(row=1, column=0)
 com2_standby_frame = radiolabelframe(radio_02_frame, text="Comm 02 - StandBy")
 com2_standby_frame.grid(row=0, column=1)
 
-com2_standby_display = radiodisplay(com2_standby_frame, textvariable=com2_standby_text)
+com2_standby_display = radiodisplay(com2_standby_frame, textvariable=com2_standb_txt)
 com2_standby_display.grid(row=0, column=0)
 
 com2_standby_buttons_frame = tkinter.Frame(com2_standby_frame, bg="black")
@@ -1152,17 +1301,17 @@ instancia_03_do_grupo.botaod.config(command=clicoubotao_d_nogrupo_03)
 nav2_act_fr = radiolabelframe(radio_02_frame, text="Nav 02 - Active")
 nav2_act_fr.grid(row=0, column=2)
 
-nav2_act_disp = radiodisplay(nav2_act_fr, text=nav2_active_text)
+nav2_act_disp = radiodisplay(nav2_act_fr, textvariable=nav2_active_txt)
 nav2_act_disp.grid(row=0, column=0)
 
-swap_button = botao_swap(nav2_act_fr)
-swap_button.grid(row=1, column=0)
+nav2_swap_button = botao_swap(nav2_act_fr)
+nav2_swap_button.grid(row=1, column=0)
 
 # Frame - nav2 - standby
 nav2_standby_frame = radiolabelframe(radio_02_frame, text="Nav 02 - StandBy")
 nav2_standby_frame.grid(row=0, column=3)
 
-nav2_standby_display = radiodisplay(nav2_standby_frame, textvariable=nav2_standby_text)
+nav2_standby_display = radiodisplay(nav2_standby_frame, textvariable=nav2_standb_txt)
 nav2_standby_display.grid(row=0, column=0)
 
 nav2_standby_buttons_frame = tkinter.Frame(nav2_standby_frame, bg="black")
@@ -1176,14 +1325,11 @@ instancia_04_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_04)
 instancia_04_do_grupo.botaod.config(command=clicoubotao_d_nogrupo_04)
 
 
-
-
-
-
-
-
-
-
+# Configura os botões swap
+com1_swap_button.config(command=clicou_swap_com1)
+nav1_swap_button.config(command=clicou_swap_nav1)
+com2_swap_button.config(command=clicou_swap_com2)
+nav2_swap_button.config(command=clicou_swap_nav2)
 
 
 
@@ -1284,8 +1430,7 @@ botoneira_frame.grid(row=3, column=0, sticky="ew")
 
 # criar instancias dos botões
 bot_pbk = botaogrand(botoneira_frame)
-sca_pan = tkinter.Scale(botoneira_frame, orient="horizontal", bg="black", fg="white")
-sca_rad = tkinter.Scale(botoneira_frame, orient="horizontal", bg="black", fg="white")
+
 bot_alt = botaovermelho(botoneira_frame)
 bot_bat = botaovermelho(botoneira_frame)
 bot_dom = botaopreto(botoneira_frame)
@@ -1317,8 +1462,8 @@ bot_fuv.grid(row=2, column=1)
 bot_alt.grid(row=2, column=2)
 bot_bat.grid(row=2, column=3)
 
-sca_pan.grid(row=2, column=5)
-sca_rad.grid(row=2, column=6)
+
+
 
 bot_dom.grid(row=2, column=7)
 bot_pit.grid(row=2, column=8)
@@ -1329,7 +1474,7 @@ bot_tax.grid(row=2, column=12)
 bot_ldg.grid(row=2, column=13)
 
 
-
+""" 
 #### Cria label do estado dos botoes 
 label_alt = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=alt_tkin, font=("verdana", 6))
 label_bat = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=bat_tkin, font=("verdana", 6))
@@ -1374,7 +1519,7 @@ label_bcn_is.grid(row=4, column=6)
 label_tax_is.grid(row=4, column=7)
 label_ldg_is.grid(row=4, column=8)
 
-
+ """
 # padding para os botões
 for widget in botoneira_frame.winfo_children():
     widget.grid_configure(padx=5, pady=5)
@@ -1440,8 +1585,10 @@ for widget in frame.winfo_children():
 
 
 ############################################################## INICIA A APLICAÇÃO
+
 # Inicia uma thread para receber dados do servidor em segundo plano
-threading.Thread(target=receive_data, daemon=True).start()
+if bypass_net == 0:
+    threading.Thread(target=receive_data, daemon=True).start()
 
 update_display()
 puxaestadosdosim()

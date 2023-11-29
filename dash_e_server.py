@@ -1,3 +1,5 @@
+# This version is: E
+
 # Configurações básicas
 bypass_sim = 0 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
 

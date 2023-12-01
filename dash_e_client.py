@@ -1,10 +1,12 @@
-# This version is: E
+# This version is: Sicredi
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
 bypass_net = 1 # Caso SIM, ignorar configurações de rede
 acopladois = 0 # Caso SIM, o app inicia "acoplado" ao SIM
 
+#ac selection
+aircraft = 152
 
 import tkinter
 import pickle
@@ -179,6 +181,18 @@ nav2_cached_txt = tkinter.StringVar()
 
 ################################################################ CLASSES 
 
+# define classe do botão knobmenos
+class knobmenos(tkinter.Button):
+    def __init__(self, master=None, **kwargs):
+        tkinter.Button.__init__(self, master, **kwargs)
+        self.configure( text="<<", bg="gray", fg="white")
+
+# define classe do botão knobmais
+class knobmaiss(tkinter.Button):
+    def __init__(self, master=None, **kwargs):
+        tkinter.Button.__init__(self, master, **kwargs)
+        self.configure( text=">>", bg="gray", fg="white")        
+
 # define classe do labelframe principal
 class mylabelframe(tkinter.LabelFrame):
     def __init__(self, master=None, **kwargs):
@@ -248,7 +262,7 @@ class botaovermelho(tkinter.Button):
         
         tkinter.Button.__init__(self, master)
         self.botaoesta = 0
-        self.configure(font=("verdana", 6))
+        self.configure(font=("verdana", 8))
         
         if self.botaoesta == 0:
             self.config(bg='red', fg='white')
@@ -270,7 +284,7 @@ class botaopreto(tkinter.Button):
     def __init__(self, master=None,):
         tkinter.Button.__init__(self, master)
         self.botaoesta = 0
-        self.configure(font=("verdana", 6))
+        self.configure(font=("verdana", 8))
         
         if self.botaoesta == 0:
             self.config(bg='black', fg='white')
@@ -294,7 +308,7 @@ class botaogrand(tkinter.Button):
     def __init__(self, master=None,):
         tkinter.Button.__init__(self, master)
         self.botaoesta = 0
-        self.config(height=1, font=("verdana", 8))
+        self.config(font=("verdana", 8))
         
         
         if self.botaoesta == 0:
@@ -314,7 +328,28 @@ class botaogrand(tkinter.Button):
 
 
 
+# cria CLASSE de botoes brancos
+class botaobranc(tkinter.Button):
+    def __init__(self, master=None,):
+        tkinter.Button.__init__(self, master)
+        self.botaoesta = 0
+        self.config(font=("verdana", 8))
+        
+        
+        if self.botaoesta == 0:
+            self.config(bg='white', fg='red')
+        else:
+            self.config(bg='#525754', fg='#0ceb47')
 
+    def alternabotaoesta(self):
+        print("alternabotaoesta foi rodado")
+        self.botaoesta = int(not self.botaoesta)
+        print(self.botaoesta)
+
+        if self.botaoesta == 0:
+            self.config(bg='white', fg='red')
+        else:
+            self.config(bg='#525754', fg='#0ceb47')
 
 
 
@@ -485,7 +520,19 @@ def onclick_testerdelta():
 
 
 
+############# funções knobs frame
 
+  # Função para obter os dados dos knobs
+def obter_knobs():
+    ajustebussola = int(aq.get("PLANE_ALTITUDE"))
+
+    return ajustebussola
+
+# Função para atualizar os campos de texto
+def atualizar_knobs():
+    knobs = obter_knobs()
+    #texto_ajustebussola.set(f"Altitude: {dados[0]} feet")
+    #window.after(1000, atualizar_knobs)  # Chama a função novamente após x ms
 
 
 
@@ -754,7 +801,7 @@ def atualizabotoes():
 
 #funções individuais dos botoes
 def click_pbk():
-    bot_alt.alternabotaoesta()
+    bot_pbk.alternabotaoesta()
     if acoplado:
         send_data("PARKING_BRAKES")
         
@@ -823,9 +870,23 @@ def click_fuv():
     if acoplado:    
         send_data("TOGGLE_FUEL_VALVE_ALL")
  
+def click_fup():
+    print("clicou fuvv")
+    bot_fup.alternabotaoesta()
+    if acoplado:    
+        send_data("TOGGLE_FUEL_VALVE_ALL")
 
+def click_pbk():
+    print("clicou fuvv")
+    bot_pbk.alternabotaoesta()
+    if acoplado:    
+        send_data("TOGGLE_FUEL_VALVE_ALL")        
 
-
+def click_avm():
+    print("clicou fuvv")
+    bot_avm.alternabotaoesta()
+    if acoplado:    
+        send_data("TOGGLE_FUEL_VALVE_ALL")
 
 # converte a variavel do botaoesta py pra var tkin
 
@@ -1120,17 +1181,7 @@ central_frame.grid(row=2, column=0, sticky="ew")
 
 ###################################### KNOBS FRAME
 
-  # Função para obter os dados dos knobs
-def obter_knobs():
-    ajustebussola = int(aq.get("PLANE_ALTITUDE"))
 
-    return ajustebussola
-
-# Função para atualizar os campos de texto
-def atualizar_knobs():
-    knobs = obter_knobs()
-    #texto_ajustebussola.set(f"Altitude: {dados[0]} feet")
-    #window.after(1000, atualizar_knobs)  # Chama a função novamente após x ms
 
 
 
@@ -1140,15 +1191,26 @@ knobs_frame.grid(row=0, column=0, sticky="ns")
 
 
 aj_compass_label = tkinter.Label(knobs_frame, text="hdg")
-aj_compass_label.grid(row=0, column=0)
+aj_compass_label.grid(row=0, column=1)
 aj_compass_spin = tkinter.Spinbox(knobs_frame, from_=1, to=360, width=10)
-aj_compass_spin.grid(row=1, column=0)
+aj_compass_spin.grid(row=1, column=1)
 
 sca_pan = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
-sca_pan.grid(row=2, column=0)
+sca_pan.grid(row=2, column=1)
 sca_rad = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
-sca_rad.grid(row=3, column=0)
+sca_rad.grid(row=3, column=1)
 
+knob_pan_menos = knobmenos(knobs_frame)
+knob_pan_maiss = knobmaiss(knobs_frame)
+
+knob_rad_menos = knobmenos(knobs_frame)
+knob_rad_maiss = knobmaiss(knobs_frame)
+
+knob_pan_menos.grid(row=2, column=0)
+knob_pan_maiss.grid(row=2, column=3)
+
+knob_rad_menos.grid(row=3, column=0)
+knob_rad_maiss.grid(row=3, column=3)
 
 
 
@@ -1440,11 +1502,13 @@ bot_stb = botaopreto(botoneira_frame)
 bot_bcn = botaopreto(botoneira_frame)
 bot_tax = botaopreto(botoneira_frame)
 bot_ldg = botaopreto(botoneira_frame)
+bot_fup = botaopreto(botoneira_frame)
 bot_fuv = botaogrand(botoneira_frame)
+bot_avm = botaobranc(botoneira_frame)
 
 # configura os botões
 
-bot_pbk.config(text="Park B.")
+bot_pbk.config(command=click_pbk, text="Park B.")
 bot_alt.config(command=click_alt, text="ALT")
 bot_bat.config(command=click_bat, text="BAT")
 bot_dom.config(command=click_pan, text="PAN")
@@ -1454,25 +1518,43 @@ bot_stb.config(command=click_stb, text="STB")
 bot_bcn.config(command=click_bcn, text="BCN")
 bot_tax.config(command=click_tax, text="TAX")
 bot_ldg.config(command=click_ldg, text="LDG")
+bot_fup.config(command=click_fup, text="FPP")
 bot_fuv.config(command=click_fuv, text="Fuel Valve")
+bot_avm.config(command=click_avm, text="AVIONICS")
+
 
 # empacota o botão
-bot_pbk.grid(row=2, column=0)
-bot_fuv.grid(row=2, column=1)
-bot_alt.grid(row=2, column=2)
-bot_bat.grid(row=2, column=3)
+if aircraft == 152:
+    bot_pbk.grid(row=2, column=0)
+    bot_fuv.grid(row=2, column=14)
+    bot_alt.grid(row=2, column=2)
+    bot_bat.grid(row=2, column=3)
+    bot_dom.grid(row=2, column=7)
+    bot_pit.grid(row=2, column=8)
+    bot_nav.grid(row=2, column=9)
+    bot_stb.grid(row=2, column=10)
+    bot_bcn.grid(row=2, column=11)
+    bot_tax.grid(row=2, column=12)
+    bot_ldg.grid(row=2, column=13)
+elif aircraft == 172:
+    bot_pbk.grid(row=2, column=0)
+    bot_fuv.grid(row=2, column=1)
+    bot_alt.grid(row=2, column=2)
+    bot_bat.grid(row=2, column=3)
+    bot_dom.grid(row=2, column=7)
+    bot_pit.grid(row=2, column=8)
+    bot_nav.grid(row=2, column=9)
+    bot_stb.grid(row=2, column=10)
+    bot_bcn.grid(row=2, column=11)
+    bot_tax.grid(row=2, column=12)
+    bot_ldg.grid(row=2, column=13)
+    bot_fup.grid(row=2, column=14)
 
 
 
-
-bot_dom.grid(row=2, column=7)
-bot_pit.grid(row=2, column=8)
-bot_nav.grid(row=2, column=9)
-bot_stb.grid(row=2, column=10)
-bot_bcn.grid(row=2, column=11)
-bot_tax.grid(row=2, column=12)
-bot_ldg.grid(row=2, column=13)
-
+    
+else:
+    print("no ac")
 
 """ 
 #### Cria label do estado dos botoes 
@@ -1520,9 +1602,7 @@ label_tax_is.grid(row=4, column=7)
 label_ldg_is.grid(row=4, column=8)
 
  """
-# padding para os botões
-for widget in botoneira_frame.winfo_children():
-    widget.grid_configure(padx=5, pady=5)
+
 
 
 ######################################### CONSOLE

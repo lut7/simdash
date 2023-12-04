@@ -2,7 +2,7 @@
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
-bypass_net = 1 # Caso SIM, ignorar configurações de rede
+bypass_net = 0 # Caso SIM, ignorar configurações de rede
 acopladois = 0 # Caso SIM, o app inicia "acoplado" ao SIM
 
 #ac selection
@@ -374,6 +374,15 @@ class botaobranc(tkinter.Button):
         else:
             self.config(bg='#525754', fg='#0ceb47')
 
+# cria CLASSE de botoes cinza
+class botaocinza(tkinter.Button):
+    def __init__(self, master=None,):
+        tkinter.Button.__init__(self, master)
+        
+        self.config(font=("verdana", 8), bg="gray", fg="black")
+        
+        
+  
 
 
 
@@ -935,18 +944,24 @@ def click_fup():
     bot_fup.alternabotaoesta()
     if acoplado:    
         send_data("TOGGLE_FUEL_VALVE_ALL")
-
-def click_pbk():
-    print("clicou fuvv")
-    bot_pbk.alternabotaoesta()
-    if acoplado:    
-        send_data("TOGGLE_FUEL_VALVE_ALL")        
+      
 
 def click_avm():
     print("clicou fuvv")
     bot_avm.alternabotaoesta()
     if acoplado:    
         send_data("TOGGLE_FUEL_VALVE_ALL")
+
+def click_mde():
+    print("clicou mag dec")
+    if acoplado:    
+        send_data("MAGNETO_DECR")
+
+def click_min():
+    print("clicou mde")
+    if acoplado:    
+        send_data("MAGNETO_INCR")
+
 
 # converte a variavel do botaoesta py pra var tkin
 
@@ -1609,6 +1624,8 @@ bot_ldg = botaopreto(botoneira_frame)
 bot_fup = botaopreto(botoneira_frame)
 bot_fuv = botaogrand(botoneira_frame)
 bot_avm = botaobranc(botoneira_frame)
+bot_mde = botaocinza(botoneira_frame)
+bot_min = botaocinza(botoneira_frame)
 
 # configura os botões
 
@@ -1625,7 +1642,8 @@ bot_ldg.config(command=click_ldg, text="LDG")
 bot_fup.config(command=click_fup, text="FPP")
 bot_fuv.config(command=click_fuv, text="Fuel Valve")
 bot_avm.config(command=click_avm, text="AVIONICS")
-
+bot_mde.config(command=click_mde, text="< Mag")
+bot_min.config(command=click_min, text="Mag >")
 
 # empacota o botão
 if aircraft == 152:
@@ -1633,6 +1651,8 @@ if aircraft == 152:
     bot_fuv.grid(row=2, column=14)
     bot_alt.grid(row=2, column=2)
     bot_bat.grid(row=2, column=3)
+    bot_mde.grid(row=2, column=4)
+    bot_min.grid(row=2, column=5)
     bot_dom.grid(row=2, column=7)
     bot_pit.grid(row=2, column=8)
     bot_nav.grid(row=2, column=9)
@@ -1640,6 +1660,7 @@ if aircraft == 152:
     bot_bcn.grid(row=2, column=11)
     bot_tax.grid(row=2, column=12)
     bot_ldg.grid(row=2, column=13)
+    
 elif aircraft == 172:
     bot_pbk.grid(row=2, column=0)
     bot_fuv.grid(row=2, column=1)

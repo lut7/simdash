@@ -1,8 +1,8 @@
-# This version is: Segundou
+# This version is: Segundoualmoço
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
-bypass_net = 0 # Caso SIM, ignorar configurações de rede
+bypass_net = 1 # Caso SIM, ignorar configurações de rede
 acopladois = 0 # Caso SIM, o app inicia "acoplado" ao SIM
 
 #ac selection
@@ -264,15 +264,26 @@ class chave_pretoverde(tkinter.Button):
         if self.botaois == 0:
             self.config(bg="black", fg="red", font=("verdana", 8))
         else:
-            self.config(bg="#525754", fg="#0ceb47", font=("verdana", 8))        
+            self.config(bg="#525754", fg="#0ceb47", font=("verdana", 8))    
+
+class chave_cinzabranco(tkinter.Button):
+    def __init__(self, master=None, label="", *args, **kwargs):
+        super().__init__(master, text=label, *args, **kwargs)
+        self.config(bg="gray", fg="black", font=("verdana", 8))
+        self.botaois = 0
+
+    def alternabotao(self):
+        if self.botaois == 0:
+            self.config(bg="gray", fg="black", font=("verdana", 8))
+        else:
+            self.config(bg="white", fg="green", font=("verdana", 8))                 
         
 class bot_simples_preto(tkinter.Button):
     def __init__(self, master=None, **kwargs):
         tkinter.Button.__init__(self, master, **kwargs)
         self.configure(bg="black", fg="white", font=("verdana", 8))
 
-        
-        
+              
         
         
         
@@ -847,6 +858,43 @@ def fun_clicou_off():
 
 
 
+def fun_clicou_mag(botao):
+    # Define botaois como 1 no botão clicado e como 0 nos demais botões
+    for b in botoes_mag:
+        b.botaois = 1 if b == botao else 0
+        b.alternabotao()
+        print(f"Botão {b.cget('text')} - Estado: {b.botaois}")
+
+    # Condicional para executar funções específicas com base na opção do botão clicado
+    if botao.cget('text') == 'off':
+        fun_clicou_oof()
+    elif botao.cget('text') == 'bth':
+        fun_clicou_bth()
+    elif botao.cget('text') == 'lef':
+        fun_clicou_lef()
+    elif botao.cget('text') == 'rig':
+        fun_clicou_rig()
+    elif botao.cget('text') == 'sta':
+        fun_clicou_sta()
+
+# Funções específicas para cada opção do botão
+def fun_clicou_oof():
+    print("Função específica para o botão mag tst")
+
+def fun_clicou_bth():
+    print("Função específica para o botão mag alt")
+
+def fun_clicou_lef():
+    print("Função específica para o botão mag onn")
+
+def fun_clicou_rig():
+    print("Função específica para o botão mag sby")
+
+def fun_clicou_sta():
+    print("Função específica para o botão mag off")
+
+
+
 #################### funções na botoneira
 
 # puxa do sim o estado do painel e atualiza
@@ -1053,7 +1101,7 @@ frame.grid(row=0, column=0, padx=5, pady=5)
 ################ info frame - interface
 
 info_frame = mylabelframe(frame, text="Information Frame")
-info_frame.grid(row=0, column=0, sticky="we")
+info_frame.grid(row=6, column=0, sticky="we")
 
 # AC INFO - FRAME
 
@@ -1175,41 +1223,6 @@ for widget in var_info_frame.winfo_children():
 
 
 
-################## interface developers frame
-dev_frame = mylabelframe(frame, text="Developers frame")
-dev_frame.grid(row=1, column=0, sticky="news")
-
-
-
-
-# checkbox bypass
-checkbox_bypass_sim = tkinter.Checkbutton(dev_frame, text="ByPass SimConection", variable=bypass_sim_tkbo, state="disabled")
-checkbox_bypass_sim.grid(row=0, column=0, sticky="news")
-
-# cria checkbutton acoplado
-checkbutton_acoplado = tkinter.Checkbutton(dev_frame, variable=acoplado, text="App Acoplado ao SIM", command=alterna_acoplado)
-checkbutton_acoplado.grid(row=0, column=1)
-
-# botão testeralpha 
-button_testeralpha = tkinter.Button(dev_frame, text="Tester Alpha", command=onclick_testeralpha)
-button_testeralpha.grid(row=0, column=2, sticky="w")
-
-# botão testerbeta
-button_testerbeta = tkinter.Button(dev_frame, text="Tester Beta", command=onclick_testerbeta)
-button_testerbeta.grid(row=0, column=3, sticky="w")
-
-# botão testercharlie
-button_testercharlie = tkinter.Button(dev_frame, text="Tester charlie", command=onclick_testercharlie)
-button_testercharlie.grid(row=0, column=4, sticky="w")
-
-# botão testerbeta
-button_testerdelta = tkinter.Button(dev_frame, text="Tester delta", command=onclick_testerdelta)
-button_testerdelta.grid(row=0, column=5, sticky="w")
-
-
-#cria label
-label_acoplado = tkinter.Label(dev_frame, text="decoy", fg="red")
-label_acoplado.grid(row=0, column=6)
 
 
     
@@ -1315,7 +1328,7 @@ for widget in knobs_frame.winfo_children():
 # Big Radios Frame
 
 radios_frame = radiolabelframe(central_frame, text="Radios Frame")
-radios_frame.grid(row=0, column=1)
+radios_frame.grid(row=0, column=2)
 
 # Radio 1 
 
@@ -1553,7 +1566,7 @@ def onclick_button_calculate():
 # interface
 
 calc_frame = mylabelframe(central_frame, text="Calculator Frame")
-calc_frame.grid(row=0, column=2, sticky="NEWS")
+calc_frame.grid(row=0, column=1, sticky="NEWS")
 
 velocidade_label = tkinter.Label(calc_frame, text="Ias: ")
 velocidade_label.grid(row=0, column=0)
@@ -1627,6 +1640,20 @@ bot_avm = botaobranc(botoneira_frame)
 bot_mde = botaocinza(botoneira_frame)
 bot_min = botaocinza(botoneira_frame)
 
+mag_off = chave_cinzabranco(botoneira_frame, label="off", command=lambda: fun_clicou_mag(mag_off))
+mag_bth = chave_cinzabranco(botoneira_frame, label="bth", command=lambda: fun_clicou_mag(mag_bth))
+mag_lef = chave_cinzabranco(botoneira_frame, label="lef", command=lambda: fun_clicou_mag(mag_lef))
+mag_rig = chave_cinzabranco(botoneira_frame, label="rig", command=lambda: fun_clicou_mag(mag_rig))
+mag_sta = chave_cinzabranco(botoneira_frame, label="sta", command=lambda: fun_clicou_mag(mag_sta))
+
+botoes_mag = [mag_off, mag_bth, mag_lef, mag_rig, mag_sta]
+
+mag_off.grid(row=2, column=21)
+mag_bth.grid(row=2, column=22)
+mag_lef.grid(row=2, column=23)
+mag_rig.grid(row=2, column=24)
+mag_sta.grid(row=2, column=25)
+
 # configura os botões
 
 bot_pbk.config(command=click_pbk, text="Park B.")
@@ -1645,21 +1672,27 @@ bot_avm.config(command=click_avm, text="AVIONICS")
 bot_mde.config(command=click_mde, text="< Mag")
 bot_min.config(command=click_min, text="Mag >")
 
+
+
+
 # empacota o botão
 if aircraft == 152:
     bot_pbk.grid(row=2, column=0)
-    bot_fuv.grid(row=2, column=14)
-    bot_alt.grid(row=2, column=2)
-    bot_bat.grid(row=2, column=3)
-    bot_mde.grid(row=2, column=4)
-    bot_min.grid(row=2, column=5)
-    bot_dom.grid(row=2, column=7)
-    bot_pit.grid(row=2, column=8)
-    bot_nav.grid(row=2, column=9)
-    bot_stb.grid(row=2, column=10)
-    bot_bcn.grid(row=2, column=11)
-    bot_tax.grid(row=2, column=12)
-    bot_ldg.grid(row=2, column=13)
+    bot_alt.grid(row=2, column=1)
+    bot_bat.grid(row=2, column=2)
+    mag_off.grid(row=2, column=3)
+    mag_bth.grid(row=2, column=4)
+    mag_lef.grid(row=2, column=5)
+    mag_rig.grid(row=2, column=6)
+    mag_sta.grid(row=2, column=7)
+    bot_dom.grid(row=2, column=8)
+    bot_pit.grid(row=2, column=9)
+    bot_nav.grid(row=2, column=10)
+    bot_stb.grid(row=2, column=11)
+    bot_bcn.grid(row=2, column=12)
+    bot_tax.grid(row=2, column=13)
+    bot_ldg.grid(row=2, column=14)
+    bot_fuv.grid(row=2, column=15)
     
 elif aircraft == 172:
     bot_pbk.grid(row=2, column=0)
@@ -1730,11 +1763,14 @@ label_ldg_is.grid(row=4, column=8)
 
 
 
+
+
+
 ######################################### CONSOLE
 
 
 console_frame = mylabelframe(frame, text="Console")
-console_frame.grid(row=4, column= 0, sticky="news")
+console_frame.grid(row=5, column= 0, sticky="news")
 console_frame.columnconfigure(1, weight=1)
 
 console_entry = tkinter.Entry(console_frame, bg="black", fg="#53f73e", text=">>>>>>")
@@ -1746,6 +1782,41 @@ console_button.grid(row=3, column=2)
 
 
 
+################## interface developers frame
+dev_frame = mylabelframe(frame, text="Developers frame")
+dev_frame.grid(row=4, column=0, sticky="news")
+
+
+
+
+# checkbox bypass
+checkbox_bypass_sim = tkinter.Checkbutton(dev_frame, text="ByPass SimConection", variable=bypass_sim_tkbo, state="disabled")
+checkbox_bypass_sim.grid(row=0, column=0, sticky="news")
+
+# cria checkbutton acoplado
+checkbutton_acoplado = tkinter.Checkbutton(dev_frame, variable=acoplado, text="App Acoplado ao SIM", command=alterna_acoplado)
+checkbutton_acoplado.grid(row=0, column=1)
+
+# botão testeralpha 
+button_testeralpha = tkinter.Button(dev_frame, text="Tester Alpha", command=onclick_testeralpha)
+button_testeralpha.grid(row=0, column=2, sticky="w")
+
+# botão testerbeta
+button_testerbeta = tkinter.Button(dev_frame, text="Tester Beta", command=onclick_testerbeta)
+button_testerbeta.grid(row=0, column=3, sticky="w")
+
+# botão testercharlie
+button_testercharlie = tkinter.Button(dev_frame, text="Tester charlie", command=onclick_testercharlie)
+button_testercharlie.grid(row=0, column=4, sticky="w")
+
+# botão testerbeta
+button_testerdelta = tkinter.Button(dev_frame, text="Tester delta", command=onclick_testerdelta)
+button_testerdelta.grid(row=0, column=5, sticky="w")
+
+
+#cria label
+label_acoplado = tkinter.Label(dev_frame, text="decoy", fg="red")
+label_acoplado.grid(row=0, column=6)
 
 
 

@@ -1,4 +1,4 @@
-# This version is: Sicredi
+# This version is: Segundou
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
@@ -209,7 +209,7 @@ class radiolabelframe(tkinter.LabelFrame):
 class radiodisplay(tkinter.Label):
     def __init__(self, master=None, **kwargs):
         tkinter.Label.__init__(self, master, **kwargs)
-        self.configure(font=("Digital-7", 20), fg="red", bg="black")        
+        self.configure(font=("Digital-7", 20), fg="orange", bg="black")        
 
 ############################# classes dos RADIO
 
@@ -222,18 +222,18 @@ class botao_swap(tkinter.Button):
         
         
 # NOVOS botoes seletora de frequencia 
-class obotaodogrupo(tkinter.Button):
+class bot_freq_sel(tkinter.Button):
     def __init__(self, master=None, **kwargs):
         tkinter.Button.__init__(self, master, **kwargs)
         self.config(bg="black", fg="white", font=("verdana", 7))
 
-class ogrupodebotoes():
+class freq_sel():
     def __init__(self, master=None):
         # Criação dos botões no grupo
-        self.botaoa = obotaodogrupo(master, text="-1")
-        self.botaob = obotaodogrupo(master, text="+1")
-        self.botaoc = obotaodogrupo(master, text="-5")
-        self.botaod = obotaodogrupo(master, text="+5")
+        self.botaoa = bot_freq_sel(master, text="-1")
+        self.botaob = bot_freq_sel(master, text="+1")
+        self.botaoc = bot_freq_sel(master, text="-5")
+        self.botaod = bot_freq_sel(master, text="+5")
         
         # Posicionamento dos botões na grade
         self.botaoa.grid(row=0, column=0)
@@ -241,13 +241,36 @@ class ogrupodebotoes():
         self.botaoc.grid(row=0, column=2)
         self.botaod.grid(row=0, column=3)
 
+class xpdr_sel(tkinter.Frame):  # Herde de tk.Frame
+    def __init__(self, master=None):
+        super().__init__(master)
+
+        # Criação dos botões no grupo
+        self.botaoa = bot_freq_sel(self, text="<")
+        self.botaob = bot_freq_sel(self, text=">")
+
+        # Posicionamento dos botões na grade
+        self.botaoa.grid(row=0, column=0, sticky="ns")
+        self.botaob.grid(row=0, column=1, sticky="ns")
 
 
+class chave_pretoverde(tkinter.Button):
+    def __init__(self, master=None, label="", *args, **kwargs):
+        super().__init__(master, text=label, *args, **kwargs)
+        self.config(bg="black", fg="red", font=("verdana", 8))
+        self.botaois = 0
+
+    def alternabotao(self):
+        if self.botaois == 0:
+            self.config(bg="black", fg="red", font=("verdana", 8))
+        else:
+            self.config(bg="#525754", fg="#0ceb47", font=("verdana", 8))        
         
-        
-  
-  
-  
+class bot_simples_preto(tkinter.Button):
+    def __init__(self, master=None, **kwargs):
+        tkinter.Button.__init__(self, master, **kwargs)
+        self.configure(bg="black", fg="white", font=("verdana", 8))
+
         
         
         
@@ -778,6 +801,43 @@ def clicou_swap_nav2():
         send_data("COM_STBY_RADIO_SWAP")                
 
 
+def fun_clicou_xpdr(botao):
+    # Define botaois como 1 no botão clicado e como 0 nos demais botões
+    for b in botoes_xpdr:
+        b.botaois = 1 if b == botao else 0
+        b.alternabotao()
+        print(f"Botão {b.cget('text')} - Estado: {b.botaois}")
+
+    # Condicional para executar funções específicas com base na opção do botão clicado
+    if botao.cget('text') == 'tst':
+        fun_clicou_tst()
+    elif botao.cget('text') == 'alt':
+        fun_clicou_alt()
+    elif botao.cget('text') == 'onn':
+        fun_clicou_onn()
+    elif botao.cget('text') == 'sby':
+        fun_clicou_sby()
+    elif botao.cget('text') == 'off':
+        fun_clicou_off()
+
+# Funções específicas para cada opção do botão
+def fun_clicou_tst():
+    print("Função específica para o botão tst")
+
+def fun_clicou_alt():
+    print("Função específica para o botão alt")
+
+def fun_clicou_onn():
+    print("Função específica para o botão onn")
+
+def fun_clicou_sby():
+    print("Função específica para o botão sby")
+
+def fun_clicou_off():
+    print("Função específica para o botão off")
+
+
+
 #################### funções na botoneira
 
 # puxa do sim o estado do painel e atualiza
@@ -1273,7 +1333,7 @@ com1_standb_buttons_frame = tkinter.Frame(com1_standb_frame, bg="black")
 com1_standb_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância do grupo de botões
-instancia_02_do_grupo = ogrupodebotoes(com1_standb_buttons_frame)
+instancia_02_do_grupo = freq_sel(com1_standb_buttons_frame)
 instancia_02_do_grupo.botaoa.config(command=clicoubotao_a_nogrupo_01)
 instancia_02_do_grupo.botaob.config(command=clicoubotao_b_nogrupo_01)
 instancia_02_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_01)
@@ -1315,7 +1375,7 @@ nav1_standby_buttons_frame.grid(row=1, column=0)
 
 
 # Criação da instância do grupo de botões
-instancia_02_do_grupo = ogrupodebotoes(nav1_standby_buttons_frame)
+instancia_02_do_grupo = freq_sel(nav1_standby_buttons_frame)
 instancia_02_do_grupo.botaoa.config(command=clicoubotao_a_nogrupo_02)
 instancia_02_do_grupo.botaob.config(command=clicoubotao_b_nogrupo_02)
 instancia_02_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_02)
@@ -1350,8 +1410,8 @@ com2_standby_display.grid(row=0, column=0)
 com2_standby_buttons_frame = tkinter.Frame(com2_standby_frame, bg="black")
 com2_standby_buttons_frame.grid(row=1, column=0)
 
-# Criação da instância do grupo de botões
-instancia_03_do_grupo = ogrupodebotoes(com2_standby_buttons_frame)
+# Criação da instância dos botoes de seletora frequencia
+instancia_03_do_grupo = freq_sel(com2_standby_buttons_frame)
 instancia_03_do_grupo.botaoa.config(command=clicoubotao_a_nogrupo_03)
 instancia_03_do_grupo.botaob.config(command=clicoubotao_b_nogrupo_03)
 instancia_03_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_03)
@@ -1380,7 +1440,7 @@ nav2_standby_buttons_frame = tkinter.Frame(nav2_standby_frame, bg="black")
 nav2_standby_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância do grupo de botões
-instancia_04_do_grupo = ogrupodebotoes(nav2_standby_buttons_frame)
+instancia_04_do_grupo = freq_sel(nav2_standby_buttons_frame)
 instancia_04_do_grupo.botaoa.config(command=clicoubotao_a_nogrupo_04)
 instancia_04_do_grupo.botaob.config(command=clicoubotao_b_nogrupo_04)
 instancia_04_do_grupo.botaoc.config(command=clicoubotao_c_nogrupo_04)
@@ -1404,13 +1464,57 @@ for widget in radios_frame.winfo_children():
 
 
 
+radio_03_frame = radiolabelframe(radios_frame, text="Transponder")
+radio_03_frame.grid(row=3, column=0, sticky="news")
 
+radio_03_subframe_0 = radiolabelframe(radio_03_frame, text="seletor")
+radio_03_subframe_1 = radiolabelframe(radio_03_frame, text="ident")
+radio_03_subframe_2 = radiolabelframe(radio_03_frame, text="digit 1")
+radio_03_subframe_3 = radiolabelframe(radio_03_frame, text="digit 2")
+radio_03_subframe_4 = radiolabelframe(radio_03_frame, text="digit 3")
+radio_03_subframe_5 = radiolabelframe(radio_03_frame, text="digit 4")
 
+radio_03_subframe_0.grid(row=0, column=0, sticky="ns")
+radio_03_subframe_1.grid(row=0, column=1, sticky="ns")
+radio_03_subframe_2.grid(row=0, column=2, sticky="ns")
+radio_03_subframe_3.grid(row=0, column=3, sticky="ns")
+radio_03_subframe_4.grid(row=0, column=4, sticky="ns")
+radio_03_subframe_5.grid(row=0, column=5, sticky="ns")
 
+xpdr_tst = chave_pretoverde(radio_03_subframe_0, label="tst", command=lambda: fun_clicou_xpdr(xpdr_tst))
+xpdr_alt = chave_pretoverde(radio_03_subframe_0, label="alt", command=lambda: fun_clicou_xpdr(xpdr_alt))
+xpdr_onn = chave_pretoverde(radio_03_subframe_0, label="onn", command=lambda: fun_clicou_xpdr(xpdr_onn))
+xpdr_sby = chave_pretoverde(radio_03_subframe_0, label="sby", command=lambda: fun_clicou_xpdr(xpdr_sby))
+xpdr_off = chave_pretoverde(radio_03_subframe_0, label="off", command=lambda: fun_clicou_xpdr(xpdr_off))
 
+botoes_xpdr = [xpdr_tst, xpdr_alt, xpdr_onn, xpdr_sby, xpdr_off]
 
+xpdr_tst.grid(row=0, column=0)
+xpdr_alt.grid(row=0, column=1)
+xpdr_onn.grid(row=1, column=0)
+xpdr_sby.grid(row=1, column=1)
+xpdr_off.grid(row=0, column=2)
 
+bot_ident = bot_simples_preto(radio_03_subframe_1, text="Ident")
+bot_ident.grid(row=0, column=0)
 
+xpdr_digit_1 = radiodisplay(radio_03_subframe_2, text="1")
+xpdr_digit_2 = radiodisplay(radio_03_subframe_3, text="2")
+xpdr_digit_3 = radiodisplay(radio_03_subframe_4, text="3")
+xpdr_digit_4 = radiodisplay(radio_03_subframe_5, text="4")
+xpdr_digit_1.grid(row=0, column=0)
+xpdr_digit_2.grid(row=0, column=0)
+xpdr_digit_3.grid(row=0, column=0)
+xpdr_digit_4.grid(row=0, column=0)
+
+digit_1_sel = xpdr_sel(radio_03_subframe_2)
+digit_2_sel = xpdr_sel(radio_03_subframe_3)
+digit_3_sel = xpdr_sel(radio_03_subframe_4)
+digit_4_sel = xpdr_sel(radio_03_subframe_5)
+digit_1_sel.grid(row=1, column=0)
+digit_2_sel.grid(row=1, column=0)
+digit_3_sel.grid(row=1, column=0)
+digit_4_sel.grid(row=1, column=0)
 
 ###################################### CALC FRAME
 

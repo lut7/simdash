@@ -1,4 +1,4 @@
-# This version is: Segundoualmoço
+# This version is: quartaalmoço
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
@@ -63,6 +63,8 @@ window.geometry("950x550")
 
 bypass_sim_tkbo = tkinter.BooleanVar(value=(bypass_sim != 0))  # Use BooleanVar to control the Checkbutton state
 acoplado = tkinter.BooleanVar(value= True if acopladois == 1 else False)
+
+# variaveis botoneira 
 
 # Variaveis python de estado da botoneira
 var_alt = 0
@@ -175,7 +177,12 @@ nav2_active_txt = tkinter.StringVar(value=900.10)
 nav2_standb_txt = tkinter.StringVar()
 nav2_cached_txt = tkinter.StringVar()
 
+# variaveis transponder
 
+var_xpdr_1 = tkinter.IntVar(value=1)
+var_xpdr_2 = tkinter.IntVar(value=2)
+var_xpdr_3 = tkinter.IntVar(value=3)
+var_xpdr_4 = tkinter.IntVar(value=4)
 
 
 
@@ -821,6 +828,8 @@ def clicou_swap_nav2():
         send_data("COM_STBY_RADIO_SWAP")                
 
 
+# funções transponder
+
 def fun_clicou_xpdr(botao):
     # Define botaois como 1 no botão clicado e como 0 nos demais botões
     for b in botoes_xpdr:
@@ -841,6 +850,7 @@ def fun_clicou_xpdr(botao):
         fun_clicou_off()
 
 # Funções específicas para cada opção do botão
+## ( no futuro, da pra tirar essa funções dedicadas e colocar junto do if elif, acho)
 def fun_clicou_tst():
     print("Função específica para o botão tst")
 
@@ -856,42 +866,47 @@ def fun_clicou_sby():
 def fun_clicou_off():
     print("Função específica para o botão off")
 
+# Função para os seletores de dígito do transponder
+def clicou_digit_sel_xpdr(texto_passado):
+    if texto_passado == "1-":
+        var_xpdr_1.set((var_xpdr_1.get() - 1) % 8)
+        if acoplado:
+            send_data("XPNDR_1000_DEC")
 
+    elif texto_passado == "1+":
+        var_xpdr_1.set((var_xpdr_1.get() + 1) % 8)
+        if acoplado:
+            send_data("XPNDR_1000_INC")  
 
-def fun_clicou_mag(botao):
-    # Define botaois como 1 no botão clicado e como 0 nos demais botões
-    for b in botoes_mag:
-        b.botaois = 1 if b == botao else 0
-        b.alternabotao()
-        print(f"Botão {b.cget('text')} - Estado: {b.botaois}")
+    elif texto_passado == "2-":
+        var_xpdr_2.set((var_xpdr_2.get() - 1) % 8)
+        if acoplado:
+            send_data("XPNDR_100_DEC")  
 
-    # Condicional para executar funções específicas com base na opção do botão clicado
-    if botao.cget('text') == 'off':
-        fun_clicou_oof()
-    elif botao.cget('text') == 'bth':
-        fun_clicou_bth()
-    elif botao.cget('text') == 'lef':
-        fun_clicou_lef()
-    elif botao.cget('text') == 'rig':
-        fun_clicou_rig()
-    elif botao.cget('text') == 'sta':
-        fun_clicou_sta()
+    elif texto_passado == "2+":
+        var_xpdr_2.set((var_xpdr_2.get() + 1) % 8)
+        if acoplado:
+            send_data("XPNDR_100_INC")  
 
-# Funções específicas para cada opção do botão
-def fun_clicou_oof():
-    print("Função específica para o botão mag tst")
+    elif texto_passado == "3-":
+        var_xpdr_3.set((var_xpdr_3.get() - 1) % 8)
+        if acoplado:
+             send_data("XPNDR_10_DEC")  
 
-def fun_clicou_bth():
-    print("Função específica para o botão mag alt")
+    elif texto_passado == "3+":
+        var_xpdr_3.set((var_xpdr_3.get() + 1) % 8)
+        if acoplado:
+             send_data("XPNDR_10_INC")  
 
-def fun_clicou_lef():
-    print("Função específica para o botão mag onn")
+    elif texto_passado == "4-":
+        var_xpdr_4.set((var_xpdr_4.get() - 1) % 8)
+        if acoplado:
+            send_data("XPNDR_1_DEC")  
 
-def fun_clicou_rig():
-    print("Função específica para o botão mag sby")
-
-def fun_clicou_sta():
-    print("Função específica para o botão mag off")
+    elif texto_passado == "4+":
+        var_xpdr_4.set((var_xpdr_4.get() + 1) % 8)
+        if acoplado:
+            send_data("XPNDR_1_INC")  
 
 
 
@@ -1009,6 +1024,68 @@ def click_min():
     print("clicou mde")
     if acoplado:    
         send_data("MAGNETO_INCR")
+
+
+
+def fun_clicou_mag(botao):
+    # Define botaois como 1 no botão clicado e como 0 nos demais botões
+    for b in botoes_mag:
+        b.botaois = 1 if b == botao else 0
+        b.alternabotao()
+        print(f"Botão {b.cget('text')} - Estado: {b.botaois}")
+
+    # Condicional para executar funções específicas com base na opção do botão clicado
+    if botao.cget('text') == 'off':
+        fun_clicou_oof()
+    elif botao.cget('text') == 'lef':
+        fun_clicou_lef()
+    elif botao.cget('text') == 'rig':
+        fun_clicou_rig()
+    elif botao.cget('text') == 'bth':
+        fun_clicou_bth()
+    elif botao.cget('text') == 'sta':
+        fun_clicou_sta()
+
+def magstarter_voltaboth():
+    print("magneto voltando pra posição both")
+    for b in botoes_mag:
+        b.botaois = 0
+        b.alternabotao()
+    mag_sta.botaois = 0
+    mag_sta.alternabotao()
+    mag_bth.botaois = 1
+    mag_bth.alternabotao()
+    fun_clicou_bth()
+
+# Funções específicas para cada opção do botão
+def fun_clicou_oof():
+    print("Função específica para o botão mag tst")
+    if acoplado:    
+        send_data("MAGNETO1_OFF")    
+
+def fun_clicou_lef():
+    print("Função específica para o botão mag lef")
+    if acoplado:    
+        send_data("MAGNETO1_LEFT")
+
+def fun_clicou_rig():
+    print("Função específica para o botão mag rig")
+    if acoplado:    
+        send_data("MAGNETO1_RIGHT")
+
+def fun_clicou_bth():
+    print("Função específica para o botão mag both")    
+    if acoplado:    
+        send_data("MAGNETO1_BOTH")
+
+def fun_clicou_sta():
+    print("Função específica para o botão mag start")
+    window.after(3000, magstarter_voltaboth)
+    if acoplado:    
+        send_data("MAGNETO1_START")
+
+
+
 
 
 # converte a variavel do botaoesta py pra var tkin
@@ -1217,15 +1294,7 @@ for widget in var_info_frame.winfo_children():
 
 
 
-############################################### DEVeloper FRAME
-
-
-
-
-
-
-
-    
+ 
 
 
 
@@ -1491,17 +1560,18 @@ for widget in radios_frame.winfo_children():
 
 
 
+############## TRANSPONDER
 
 radio_03_frame = radiolabelframe(radios_frame, text="Transponder")
 radio_03_frame.grid(row=3, column=0, sticky="news")
 
+# cria e empacota subframes no transponder
 radio_03_subframe_0 = radiolabelframe(radio_03_frame, text="seletor")
 radio_03_subframe_1 = radiolabelframe(radio_03_frame, text="ident")
 radio_03_subframe_2 = radiolabelframe(radio_03_frame, text="digit 1")
 radio_03_subframe_3 = radiolabelframe(radio_03_frame, text="digit 2")
 radio_03_subframe_4 = radiolabelframe(radio_03_frame, text="digit 3")
 radio_03_subframe_5 = radiolabelframe(radio_03_frame, text="digit 4")
-
 radio_03_subframe_0.grid(row=0, column=0, sticky="ns")
 radio_03_subframe_1.grid(row=0, column=1, sticky="ns")
 radio_03_subframe_2.grid(row=0, column=2, sticky="ns")
@@ -1509,32 +1579,35 @@ radio_03_subframe_3.grid(row=0, column=3, sticky="ns")
 radio_03_subframe_4.grid(row=0, column=4, sticky="ns")
 radio_03_subframe_5.grid(row=0, column=5, sticky="ns")
 
+# cria botoes no seletor do modo do transponder e empacota
 xpdr_tst = chave_pretoverde(radio_03_subframe_0, label="tst", command=lambda: fun_clicou_xpdr(xpdr_tst))
 xpdr_alt = chave_pretoverde(radio_03_subframe_0, label="alt", command=lambda: fun_clicou_xpdr(xpdr_alt))
 xpdr_onn = chave_pretoverde(radio_03_subframe_0, label="onn", command=lambda: fun_clicou_xpdr(xpdr_onn))
 xpdr_sby = chave_pretoverde(radio_03_subframe_0, label="sby", command=lambda: fun_clicou_xpdr(xpdr_sby))
 xpdr_off = chave_pretoverde(radio_03_subframe_0, label="off", command=lambda: fun_clicou_xpdr(xpdr_off))
-
-botoes_xpdr = [xpdr_tst, xpdr_alt, xpdr_onn, xpdr_sby, xpdr_off]
-
 xpdr_tst.grid(row=0, column=0)
 xpdr_alt.grid(row=0, column=1)
 xpdr_onn.grid(row=1, column=0)
 xpdr_sby.grid(row=1, column=1)
 xpdr_off.grid(row=0, column=2)
 
+botoes_xpdr = [xpdr_tst, xpdr_alt, xpdr_onn, xpdr_sby, xpdr_off]
+
+# cria botão ident
 bot_ident = bot_simples_preto(radio_03_subframe_1, text="Ident")
 bot_ident.grid(row=0, column=0)
 
-xpdr_digit_1 = radiodisplay(radio_03_subframe_2, text="1")
-xpdr_digit_2 = radiodisplay(radio_03_subframe_3, text="2")
-xpdr_digit_3 = radiodisplay(radio_03_subframe_4, text="3")
-xpdr_digit_4 = radiodisplay(radio_03_subframe_5, text="4")
-xpdr_digit_1.grid(row=0, column=0)
-xpdr_digit_2.grid(row=0, column=0)
-xpdr_digit_3.grid(row=0, column=0)
-xpdr_digit_4.grid(row=0, column=0)
+# cria e empacota os displays do transponder
+display_xpdr_digit_1 = radiodisplay(radio_03_subframe_2, textvariable=var_xpdr_1)
+display_xpdr_digit_2 = radiodisplay(radio_03_subframe_3, textvariable=var_xpdr_2)
+display_xpdr_digit_3 = radiodisplay(radio_03_subframe_4, textvariable=var_xpdr_3)
+display_xpdr_digit_4 = radiodisplay(radio_03_subframe_5, textvariable=var_xpdr_4)
+display_xpdr_digit_1.grid(row=0, column=0)
+display_xpdr_digit_2.grid(row=0, column=0)
+display_xpdr_digit_3.grid(row=0, column=0)
+display_xpdr_digit_4.grid(row=0, column=0)
 
+# cria e empacota os seletores do digito do transponder
 digit_1_sel = xpdr_sel(radio_03_subframe_2)
 digit_2_sel = xpdr_sel(radio_03_subframe_3)
 digit_3_sel = xpdr_sel(radio_03_subframe_4)
@@ -1543,6 +1616,18 @@ digit_1_sel.grid(row=1, column=0)
 digit_2_sel.grid(row=1, column=0)
 digit_3_sel.grid(row=1, column=0)
 digit_4_sel.grid(row=1, column=0)
+
+# configura os seletores para o command chamar a função
+digit_1_sel.botaoa.config(command=lambda: clicou_digit_sel_xpdr("1-"))
+digit_1_sel.botaob.config(command=lambda: clicou_digit_sel_xpdr("1+"))
+digit_2_sel.botaoa.config(command=lambda: clicou_digit_sel_xpdr("2-"))
+digit_2_sel.botaob.config(command=lambda: clicou_digit_sel_xpdr("2+"))
+digit_3_sel.botaoa.config(command=lambda: clicou_digit_sel_xpdr("3-"))
+digit_3_sel.botaob.config(command=lambda: clicou_digit_sel_xpdr("3+"))
+digit_4_sel.botaoa.config(command=lambda: clicou_digit_sel_xpdr("4-"))
+digit_4_sel.botaob.config(command=lambda: clicou_digit_sel_xpdr("4+"))
+
+digitsel = [digit_1_sel, digit_1_sel, digit_2_sel, digit_2_sel, digit_3_sel, digit_3_sel, digit_4_sel, digit_4_sel]
 
 ###################################### CALC FRAME
 
@@ -1681,9 +1766,9 @@ if aircraft == 152:
     bot_alt.grid(row=2, column=1)
     bot_bat.grid(row=2, column=2)
     mag_off.grid(row=2, column=3)
-    mag_bth.grid(row=2, column=4)
+    mag_rig.grid(row=2, column=4)
     mag_lef.grid(row=2, column=5)
-    mag_rig.grid(row=2, column=6)
+    mag_bth.grid(row=2, column=6)
     mag_sta.grid(row=2, column=7)
     bot_dom.grid(row=2, column=8)
     bot_pit.grid(row=2, column=9)

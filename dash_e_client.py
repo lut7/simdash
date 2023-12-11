@@ -1,23 +1,38 @@
-# This version is: quartaalmoço
+# This version is: domingou
+
+# arrumar altitude e ias no info frame
+# deixar info frame com texto padrão, e a fun só configura. assim, fica fácil de copiar o info frame pra interface do server. 
+# corrigir erro no ping quando no linux
+#implementar manual set do transponder (ou melhor, puxar o estado do sim)
+#puxar estado dos botoes e atualizar em tempo real
+# adicionar painel de checklist
+# adicionar painel de nota geral do voo, bonus e segurança
+# evitar concorrencia de thread, garantindo que a anterior seja fechada para iniciar a nova
 
 # Configurações básicas
 bypass_sim = 1 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
-bypass_net = 1 # Caso SIM, ignorar configurações de rede
+bypass_net = 0 # Caso SIM, ignorar configurações de rede
 acopladois = 0 # Caso SIM, o app inicia "acoplado" ao SIM
 
 #ac selection
 aircraft = 152
 
-import tkinter
+import tkinter as tk    
 import pickle
 import socket
 import threading
 import json
+import psutil
+import platform
+from ping3 import ping
+import time
 try:
     from SimConnect import *
     print("importou SimConnect")
 except ModuleNotFoundError:
     print("O módulo SimConnect não foi encontrado. Certifique-se de que está instalado.")
+
+
 
 # configuração do cliente e conexão ao servidor, caso bypass esteja 0
 if bypass_net == 0:
@@ -36,7 +51,18 @@ else:
 
 
 
-
+def reconectar():
+    global client_socket
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('192.168.0.75', 12345))
+        print("Reconectado ao servidor.")
+        
+        # Reinicia a thread de recebimento após a reconexão
+        threading.Thread(target=receive_data, daemon=True).start()
+        
+    except Exception as e:
+        print(f"Erro de Conexão: {e}")
  
 
 
@@ -46,23 +72,33 @@ else:
 
 
 
+# Função para configurar a janela para tela cheia no Linux
+def configure_window(window):
+    system_platform = platform.system()
+
+    # Configurar para tela cheia apenas no Linux
+    if system_platform == 'Linux':
+        window.attributes('-fullscreen', True)
+
 # CRIAR JANELA PRINCIPAL
-window = tkinter.Tk()
+window = tk.Tk()
 window.title("Flight Dashboard")
 window.geometry("950x550")
 
-
-
-
-
+# Configuração específica para tela cheia no Linux
+configure_window(window)
 
 
 ################################################## VARIAVEIS
 
 
 
-bypass_sim_tkbo = tkinter.BooleanVar(value=(bypass_sim != 0))  # Use BooleanVar to control the Checkbutton state
-acoplado = tkinter.BooleanVar(value= True if acopladois == 1 else False)
+bypass_sim_tkbo = tk.BooleanVar(value=(bypass_sim != 0))  # Use BooleanVar to control the Checkbutton state
+acoplado = tk.BooleanVar(value= True if acopladois == 1 else False)
+
+# Adicione uma variável global para rastrear o status da conexão
+connection_status = "Não Conectado"  # Inicialmente, não conectado
+
 
 # variaveis botoneira 
 
@@ -78,17 +114,17 @@ var_tax = 0
 var_ldg = 0
 
 # cria variaveis de controle tkinter
-alt_tkin = tkinter.IntVar()
-bat_tkin = tkinter.IntVar()
-dom_tkin = tkinter.IntVar()
-pit_tkin = tkinter.IntVar()
-nav_tkin = tkinter.IntVar()
-stb_tkin = tkinter.IntVar()
-bcn_tkin = tkinter.IntVar()
-tax_tkin = tkinter.IntVar()
-ldg_tkin = tkinter.IntVar()
+alt_tkin = tk.IntVar()
+bat_tkin = tk.IntVar()
+dom_tkin = tk.IntVar()
+pit_tkin = tk.IntVar()
+nav_tkin = tk.IntVar()
+stb_tkin = tk.IntVar()
+bcn_tkin = tk.IntVar()
+tax_tkin = tk.IntVar()
+ldg_tkin = tk.IntVar()
 
-# Converte as variaveis master de estado do botão para tkinter. 
+# Converte as variaveis master de estado do botão para tk. 
 alt_tkin.set(var_alt)
 bat_tkin.set(var_bat)
 dom_tkin.set(var_dom)
@@ -99,139 +135,152 @@ bcn_tkin.set(var_bcn)
 tax_tkin.set(var_tax)
 ldg_tkin.set(var_ldg)
 
+altitude = 0
+ias = 0
+heading = 0
+fuel = 0
+hora = 0
+windspeed = 0
+windmag = 0
+oatc = 0
+baro = 0
+com1si = 5
+com1sd = 6
 
 # criar variaveis de informação
-texto_altitude = tkinter.StringVar()
-texto_ias = tkinter.StringVar()
-texto_heading = tkinter.StringVar()
-texto_fuel = tkinter.StringVar()
-texto_hora = tkinter.StringVar()
-texto_windspeed = tkinter.StringVar()
-texto_windmag = tkinter.StringVar()
-texto_oatc = tkinter.StringVar()
-texto_baro = tkinter.StringVar()
-texto_bateria_tkst = tkinter.StringVar()
+texto_altitude = tk.StringVar()
+texto_ias = tk.StringVar()
+texto_heading = tk.StringVar()
+texto_fuel = tk.StringVar()
+texto_hora = tk.StringVar()
+texto_windspeed = tk.StringVar()
+texto_windmag = tk.StringVar()
+texto_oatc = tk.StringVar()
+texto_baro = tk.StringVar()
+texto_com1si = tk.StringVar()
+texto_com1sd  = tk.StringVar()
+texto_bateria_tkst = tk.StringVar()
 
 
 # VARIAVEIS DE RADIO
 
 # Variáveis comm1
-com1_active_int = tkinter.IntVar(value=118)  # Valor inicial da parte inteira ativa
-com1_active_dec = tkinter.IntVar(value=400)   # Valor inicial da parte decimal ativa
+com1_active_int = tk.IntVar(value=118)  # Valor inicial da parte inteira ativa
+com1_active_dec = tk.IntVar(value=400)   # Valor inicial da parte decimal ativa
 
-com1_standb_int = tkinter.IntVar(value=119)  # Valor inicial da parte inteira standby
-com1_standb_dec = tkinter.IntVar(value=500)   # Valor inicial da parte decimal standby
+com1_standb_int = tk.IntVar(value=119)  # Valor inicial da parte inteira standby
+com1_standb_dec = tk.IntVar(value=500)   # Valor inicial da parte decimal standby
 
-com1_cached_int = tkinter.IntVar()
-com1_cached_dec = tkinter.IntVar()
+com1_cached_int = tk.IntVar()
+com1_cached_dec = tk.IntVar()
 
-com1_active_txt = tkinter.StringVar(value=121.510)
-com1_standb_txt = tkinter.StringVar()
-com1_cached_txt = tkinter.StringVar()
+com1_active_txt = tk.StringVar(value=121.510)
+com1_standb_txt = tk.StringVar()
+com1_cached_txt = tk.StringVar()
 
 
 
 # Variáveis nav1
-nav1_standb_int = tkinter.IntVar(value=500)  # Valor inicial da parte inteira standby
-nav1_standb_dec = tkinter.IntVar(value=50)   # Valor inicial da parte decimal standby
+nav1_standb_int = tk.IntVar(value=500)  # Valor inicial da parte inteira standby
+nav1_standb_dec = tk.IntVar(value=50)   # Valor inicial da parte decimal standby
 
-nav1_active_int = tkinter.IntVar(value=524)  # Valor inicial da parte inteira ativa
-nav1_active_dec = tkinter.IntVar(value=24)   # Valor inicial da parte decimal ativa
+nav1_active_int = tk.IntVar(value=524)  # Valor inicial da parte inteira ativa
+nav1_active_dec = tk.IntVar(value=24)   # Valor inicial da parte decimal ativa
 
-nav1_cached_int = tkinter.IntVar()
-nav1_cached_dec = tkinter.IntVar()
+nav1_cached_int = tk.IntVar()
+nav1_cached_dec = tk.IntVar()
 
-nav1_active_txt = tkinter.StringVar(value=900.10)
-nav1_standb_txt = tkinter.StringVar()
-nav1_cached_txt = tkinter.StringVar()
+nav1_active_txt = tk.StringVar(value=900.10)
+nav1_standb_txt = tk.StringVar()
+nav1_cached_txt = tk.StringVar()
 
 
 
 # Variáveis comm2
-com2_standb_int = tkinter.IntVar(value=565)  # Valor inicial da parte inteira standby
-com2_standb_dec = tkinter.IntVar(value=560)   # Valor inicial da parte decimal standby
+com2_standb_int = tk.IntVar(value=565)  # Valor inicial da parte inteira standby
+com2_standb_dec = tk.IntVar(value=560)   # Valor inicial da parte decimal standby
 
-com2_active_int = tkinter.IntVar(value=810)  # Valor inicial da parte inteira ativa
-com2_active_dec = tkinter.IntVar(value=810)   # Valor inicial da parte decimal ativa
+com2_active_int = tk.IntVar(value=810)  # Valor inicial da parte inteira ativa
+com2_active_dec = tk.IntVar(value=810)   # Valor inicial da parte decimal ativa
 
-com2_cached_int = tkinter.IntVar()
-com2_cached_dec = tkinter.IntVar()
+com2_cached_int = tk.IntVar()
+com2_cached_dec = tk.IntVar()
 
-com2_active_txt = tkinter.StringVar(value=121.510)
-com2_standb_txt = tkinter.StringVar()
-com2_cached_txt = tkinter.StringVar()
+com2_active_txt = tk.StringVar(value=121.510)
+com2_standb_txt = tk.StringVar()
+com2_cached_txt = tk.StringVar()
 
 
 
 # Variáveis nav2
-nav2_standb_int = tkinter.IntVar(value=121)  # Valor inicial da parte inteira standby
-nav2_standb_dec = tkinter.IntVar(value=12)   # Valor inicial da parte decimal standby
+nav2_standb_int = tk.IntVar(value=121)  # Valor inicial da parte inteira standby
+nav2_standb_dec = tk.IntVar(value=12)   # Valor inicial da parte decimal standby
 
-nav2_active_int = tkinter.IntVar(value=800)  # Valor inicial da parte inteira ativa
-nav2_active_dec = tkinter.IntVar(value=80)   # Valor inicial da parte decimal ativa
+nav2_active_int = tk.IntVar(value=800)  # Valor inicial da parte inteira ativa
+nav2_active_dec = tk.IntVar(value=80)   # Valor inicial da parte decimal ativa
 
-nav2_cached_int = tkinter.IntVar()
-nav2_cached_dec = tkinter.IntVar()
+nav2_cached_int = tk.IntVar()
+nav2_cached_dec = tk.IntVar()
 
-nav2_active_txt = tkinter.StringVar(value=900.10)
-nav2_standb_txt = tkinter.StringVar()
-nav2_cached_txt = tkinter.StringVar()
+nav2_active_txt = tk.StringVar(value=900.10)
+nav2_standb_txt = tk.StringVar()
+nav2_cached_txt = tk.StringVar()
 
 # variaveis transponder
 
-var_xpdr_1 = tkinter.IntVar(value=1)
-var_xpdr_2 = tkinter.IntVar(value=2)
-var_xpdr_3 = tkinter.IntVar(value=3)
-var_xpdr_4 = tkinter.IntVar(value=4)
+var_xpdr_1 = tk.IntVar(value=1)
+var_xpdr_2 = tk.IntVar(value=2)
+var_xpdr_3 = tk.IntVar(value=3)
+var_xpdr_4 = tk.IntVar(value=4)
 
 
 
 ################################################################ CLASSES 
 
 # define classe do botão knobmenos
-class knobmenos(tkinter.Button):
+class knobmenos(tk.Button):
     def __init__(self, master=None, **kwargs):
-        tkinter.Button.__init__(self, master, **kwargs)
+        tk.Button.__init__(self, master, **kwargs)
         self.configure( text="<<", bg="gray", fg="white")
 
 # define classe do botão knobmais
-class knobmaiss(tkinter.Button):
+class knobmaiss(tk.Button):
     def __init__(self, master=None, **kwargs):
-        tkinter.Button.__init__(self, master, **kwargs)
+        tk.Button.__init__(self, master, **kwargs)
         self.configure( text=">>", bg="gray", fg="white")        
 
 # define classe do labelframe principal
-class mylabelframe(tkinter.LabelFrame):
+class mylabelframe(tk.LabelFrame):
     def __init__(self, master=None, **kwargs):
-        tkinter.LabelFrame.__init__(self, master, **kwargs)
+        tk.LabelFrame.__init__(self, master, **kwargs)
         self.configure( font=("verdana", 6))
 
 # define classe do labelframe de radio
-class radiolabelframe(tkinter.LabelFrame):
+class radiolabelframe(tk.LabelFrame):
     def __init__(self, master=None, **kwargs):
-        tkinter.LabelFrame.__init__(self, master, **kwargs)
+        tk.LabelFrame.__init__(self, master, **kwargs)
         self.configure(bg="black", fg="white", font=("Verdana", 7), width=25)        
 
 # define classe dos display de radio
-class radiodisplay(tkinter.Label):
+class radiodisplay(tk.Label):
     def __init__(self, master=None, **kwargs):
-        tkinter.Label.__init__(self, master, **kwargs)
+        tk.Label.__init__(self, master, **kwargs)
         self.configure(font=("Digital-7", 20), fg="orange", bg="black")        
 
 ############################# classes dos RADIO
 
 # define classe do botão swap
-class botao_swap(tkinter.Button):
+class botao_swap(tk.Button):
     def __init__(self, master=None, **kwargs):
-        tkinter.Button.__init__(self, master, **kwargs)
+        tk.Button.__init__(self, master, **kwargs)
         self.configure( text="<-->", bg="white", fg="black", font=("verdana", 6))
 
         
         
 # NOVOS botoes seletora de frequencia 
-class bot_freq_sel(tkinter.Button):
+class bot_freq_sel(tk.Button):
     def __init__(self, master=None, **kwargs):
-        tkinter.Button.__init__(self, master, **kwargs)
+        tk.Button.__init__(self, master, **kwargs)
         self.config(bg="black", fg="white", font=("verdana", 7))
 
 class freq_sel():
@@ -248,7 +297,7 @@ class freq_sel():
         self.botaoc.grid(row=0, column=2)
         self.botaod.grid(row=0, column=3)
 
-class xpdr_sel(tkinter.Frame):  # Herde de tk.Frame
+class xpdr_sel(tk.Frame):  # Herde de tk.Frame
     def __init__(self, master=None):
         super().__init__(master)
 
@@ -261,7 +310,7 @@ class xpdr_sel(tkinter.Frame):  # Herde de tk.Frame
         self.botaob.grid(row=0, column=1, sticky="ns")
 
 
-class chave_pretoverde(tkinter.Button):
+class chave_pretoverde(tk.Button):
     def __init__(self, master=None, label="", *args, **kwargs):
         super().__init__(master, text=label, *args, **kwargs)
         self.config(bg="black", fg="red", font=("verdana", 8))
@@ -273,7 +322,7 @@ class chave_pretoverde(tkinter.Button):
         else:
             self.config(bg="#525754", fg="#0ceb47", font=("verdana", 8))    
 
-class chave_cinzabranco(tkinter.Button):
+class chave_cinzabranco(tk.Button):
     def __init__(self, master=None, label="", *args, **kwargs):
         super().__init__(master, text=label, *args, **kwargs)
         self.config(bg="gray", fg="black", font=("verdana", 8))
@@ -285,9 +334,9 @@ class chave_cinzabranco(tkinter.Button):
         else:
             self.config(bg="white", fg="green", font=("verdana", 8))                 
         
-class bot_simples_preto(tkinter.Button):
+class bot_simples_preto(tk.Button):
     def __init__(self, master=None, **kwargs):
-        tkinter.Button.__init__(self, master, **kwargs)
+        tk.Button.__init__(self, master, **kwargs)
         self.configure(bg="black", fg="white", font=("verdana", 8))
 
               
@@ -298,10 +347,10 @@ class bot_simples_preto(tkinter.Button):
 ##################### classes da botoneira
 
 # cria CLASSE de botoes vermelhos
-class botaovermelho(tkinter.Button):
+class botaovermelho(tk.Button):
     def __init__(self, master=None,):
         
-        tkinter.Button.__init__(self, master)
+        tk.Button.__init__(self, master)
         self.botaoesta = 0
         self.configure(font=("verdana", 8))
         
@@ -321,9 +370,9 @@ class botaovermelho(tkinter.Button):
             self.config(bg='lightcoral', fg='white')
             
 # cria CLASSE de botoes pretos
-class botaopreto(tkinter.Button):
+class botaopreto(tk.Button):
     def __init__(self, master=None,):
-        tkinter.Button.__init__(self, master)
+        tk.Button.__init__(self, master)
         self.botaoesta = 0
         self.configure(font=("verdana", 8))
         
@@ -345,9 +394,9 @@ class botaopreto(tkinter.Button):
 
 
 # cria CLASSE de botoes grandes
-class botaogrand(tkinter.Button):
+class botaogrand(tk.Button):
     def __init__(self, master=None,):
-        tkinter.Button.__init__(self, master)
+        tk.Button.__init__(self, master)
         self.botaoesta = 0
         self.config(font=("verdana", 8))
         
@@ -370,9 +419,9 @@ class botaogrand(tkinter.Button):
 
 
 # cria CLASSE de botoes brancos
-class botaobranc(tkinter.Button):
+class botaobranc(tk.Button):
     def __init__(self, master=None,):
-        tkinter.Button.__init__(self, master)
+        tk.Button.__init__(self, master)
         self.botaoesta = 0
         self.config(font=("verdana", 8))
         
@@ -393,9 +442,9 @@ class botaobranc(tkinter.Button):
             self.config(bg='#525754', fg='#0ceb47')
 
 # cria CLASSE de botoes cinza
-class botaocinza(tkinter.Button):
+class botaocinza(tk.Button):
     def __init__(self, master=None,):
-        tkinter.Button.__init__(self, master)
+        tk.Button.__init__(self, master)
         
         self.config(font=("verdana", 8), bg="gray", fg="black")
         
@@ -413,6 +462,62 @@ class botaocinza(tkinter.Button):
 
 ########################################################## FUNÇÕES
 
+def update_app_infos(root, memory_percent_label, memory_megabytes_label, network_total_label,
+                  network_sent_label, network_recv_label, ping_remote_label, ping_local_label):
+    # Informações sobre a própria aplicação
+    process = psutil.Process()
+    memory_percent = process.memory_percent()
+    memory_megabytes = process.memory_info().rss / (1024 * 1024)  # Convertendo para megabytes
+
+    # Informações sobre a rede da aplicação
+    network_stats = psutil.net_io_counters(pernic=True)
+    first_interface = list(network_stats.keys())[0]  # Obter a primeira interface de rede
+    network_sent_app = network_stats[first_interface].bytes_sent
+    network_recv_app = network_stats[first_interface].bytes_recv
+
+    # Informações sobre o sistema
+    network_usage_total = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
+    remote_ping = ping_server('8.8.8.8')  # Substitua '8.8.8.8' pelo seu servidor remoto
+    local_ping = ping_server('192.168.0.1')  # Substitua '192.168.0.1' pelo seu servidor local
+
+    # Convertendo o ping para milissegundos
+    remote_ping_ms = int(remote_ping * 1000) if isinstance(remote_ping, (int, float)) else remote_ping
+    local_ping_ms = int(local_ping * 1000) if isinstance(local_ping, (int, float)) else local_ping
+
+    # Atualizando os rótulos
+    memory_percent_label.config(text=f"RAM: {memory_percent:.2f}%")
+    memory_megabytes_label.config(text=f"RAM: {memory_megabytes:.2f} MB")
+    network_total_label.config(text=f"Net Total: {format_bytes(network_usage_total)}")
+    network_sent_label.config(text=f"Net Send: {format_bytes(network_sent_app)}")
+    network_recv_label.config(text=f"Net Rcv: {format_bytes(network_recv_app)}")
+    ping_remote_label.config(text=f"Ping DNS: {remote_ping_ms} ms")
+    ping_local_label.config(text=f"Ping GateW: {local_ping_ms} ms")
+
+    window.after(1000, lambda: update_app_infos(root, memory_percent_label, memory_megabytes_label,
+                                            network_total_label, network_sent_label, network_recv_label,
+                                            ping_remote_label, ping_local_label))
+
+def ping_server(host):
+    try:
+        return round(ping(host), 2)
+    except:
+        return "Erro no ping"
+
+def format_bytes(bytes):
+    kb = bytes / 1024
+    mb = kb / 1024
+    gb = mb / 1024
+    if gb >= 1:
+        return f"{gb:.2f} GB"
+    elif mb >= 1:
+        return f"{mb:.2f} MB"
+    elif kb >= 1:
+        return f"{kb:.2f} KB"
+    else:
+        return f"{bytes} Bytes"
+
+
+
 #### funções de rede    
 
 # configura função de enviar dados
@@ -422,44 +527,85 @@ if bypass_net == 0:
         client_socket.send(data.encode('utf-8'))     
 
 # configura função de receber dados
-def receive_data():
-    while True:
-        try:
-            data = client_socket.recv(1024).decode('utf-8')
-            if data:
-                handle_received_data(data)
-        except ConnectionResetError:
-            # Conexão resetada pelo servidor
-            print("Conexão perdida com o servidor.")
-            break
+    def receive_data():
+        while True:
+            try:
+                data = client_socket.recv(1024).decode('utf-8')
+                if data:
+                    handle_received_data(data)
+            except ConnectionResetError:
+                # Conexão resetada pelo servidor
+                print("Conexão perdida com o servidor.")
+                break
 
-def handle_received_data(data):
-    print(f"Dados recebidos do servidor: {data}")
+    def handle_received_data(data):
+        print(f"Dados recebidos do servidor: {data}")
 
-    # Decodifica a string JSON para obter o dicionário
-    data_dict = json.loads(data)
+        # Decodifica a string JSON para obter o dicionário
+        data_dict = json.loads(data)
 
-    # Acesse os valores do dicionário conforme necessário
-    altitude = data_dict['altitude']
-    ias = data_dict['ias']
-    heading = data_dict['heading']
-    fuel = data_dict['fuel']
-    hora = data_dict['hora']
-    windspeed = data_dict['windspeed']
-    windmag = data_dict['windmag']
-    oatc = data_dict['oatc']
-    baro = data_dict['baro']
+        # Acesse os valores do dicionário conforme necessário
+        altitude = data_dict['altitude']
+        ias = data_dict['ias']
+        heading = data_dict['heading']
+        fuel = data_dict['fuel']
+        hora = data_dict['hora']
+        windspeed = data_dict['windspeed']
+        windmag = data_dict['windmag']
+        oatc = data_dict['oatc']
+        baro = data_dict['baro']
+        com1si = data_dict['com1si']
+        com1sd = data_dict['com1sd']
+        com1ai = data_dict['com1ai']
+        com1ad = data_dict['com1ad']
+        
+        nav1si = data_dict['nav1si']
+        nav1sd = data_dict['nav1sd']
+        nav1ai = data_dict['nav1ai']
+        nav1ad = data_dict['nav1ad']
 
-    # Atualiza as variáveis da interface gráfica
-    texto_altitude.set(f"Altitude: {altitude} feet")
-    texto_ias.set(f"ias: {ias} knots")
-    texto_heading.set(f"Heading: {heading}°")
-    texto_fuel.set(f"Fuel: {fuel} Gal")
-    texto_hora.set(f"Hora local: {hora}")
-    texto_windspeed.set(f"Windspeed: {windspeed} knots")
-    texto_windmag.set(f"Wind direction: {windmag}")
-    texto_oatc.set(f"OAT: {oatc}°C")
-    texto_baro.set(f"Baro: {baro} qnh")
+        com2si = data_dict['com2si']
+        com2sd = data_dict['com2sd']
+        com2ai = data_dict['com2ai']
+        com2ad = data_dict['com2ad']
+        
+        nav2si = data_dict['nav2si']
+        nav2sd = data_dict['nav2sd']
+        nav2ai = data_dict['nav2ai']
+        nav2ad = data_dict['nav2ad']
+        
+
+
+        # Atualiza as variáveis da interface gráfica
+        texto_altitude.set(f"Altitude: {com1si} feet")
+        texto_ias.set(f"ias: {ias} knots")
+        texto_heading.set(f"Heading: {heading}°")
+        texto_fuel.set(f"Fuel: {fuel} Gal")
+        texto_hora.set(f"Hora local: {hora}")
+        texto_windspeed.set(f"Windspeed: {windspeed} knots")
+        texto_windmag.set(f"Wind direction: {windmag}")
+        texto_oatc.set(f"OAT: {oatc}°C")
+        texto_baro.set(f"Baro: {baro} qnh")
+        
+        com1_standb_int.set(com1si)
+        com1_standb_dec.set(com1sd)
+        com1_active_int.set(com1ai)
+        com1_active_dec.set(com1ad)
+        nav1_standb_int.set(nav1si)
+        nav1_standb_dec.set(int(round(float(nav1sd), 2)))
+        nav1_active_int.set(nav1ai)
+        nav1_active_dec.set(min(int(nav1ad), 99))
+        
+        com2_standb_int.set(com2si)
+        com2_standb_dec.set(com2sd)
+        com2_active_int.set(com2ai)
+        com2_active_dec.set(com2ad)
+        nav2_standb_int.set(nav2si)
+        nav2_standb_dec.set(int(round(float(nav2sd), 2)))
+        nav2_active_int.set(nav2ai)
+        nav2_active_dec.set(min(int(nav2ad), 99))
+       
+        update_radio_display()
 
     #window.after(1000, handle_received_data)  # Chama a função novamente após x ms
 
@@ -475,8 +621,8 @@ else:
     print("bypass sim: ", bypass_sim)
     
 
-# Função para obter os dados do simulador, em variaveis
-def obter_dados():
+# Função para obter os dados do simulador, em variaveis (via local, não rede)
+def obter_dados_local():
     altitude = int(aq.get("PLANE_ALTITUDE"))
     ias = int(aq.get("AIRSPEED_INDICATED"))
     heading = int(aq.get("MAGNETIC_COMPASS"))
@@ -490,25 +636,23 @@ def obter_dados():
     return altitude, ias, heading, fuel, hora, windspeed, windmag, oatc, baro
 
 
-
+""" 
 # Função para atualizar os campos de texto
 def atualizar_dados():
-    if bypass_sim == 0:
-        dados = obter_dados()
-        texto_altitude.set(f"Altitude: {dados[0]} feet")
-        texto_ias.set(f"ias: {dados[1]} knots")
-        texto_heading.set(f"heading: {dados[2]}°")
-        texto_fuel.set(f"fuel: {dados[3]} Gal")
-        texto_hora.set(f"Hora local: {dados[4]}")
-        texto_windspeed.set(f"Windspeed: {dados[5]} knots")
-        texto_windmag.set(f"Wind direction: {dados[6]}")
-        texto_oatc.set(f"OAT: {dados[7]}ºC")
-        texto_baro.set(f"Baro: {dados[8]} qnh")
-        window.after(1000, atualizar_dados)  # Chama a função novamente após x ms
-    else:
-        print("BypassSim:", bypass_sim)
-
-
+    print("rodando atualizar dados (via local)")
+    dados = obter_dados_local()
+    texto_altitude.set(f"Altitude: {dados[0]} feet")
+    texto_ias.set(f"ias: {dados[1]} knots")
+    texto_heading.set(f"heading: {dados[2]}°")
+    texto_fuel.set(f"fuel: {dados[3]} Gal")
+    texto_hora.set(f"Hora local: {dados[4]}")
+    texto_windspeed.set(f"Windspeed: {dados[5]} knots")
+    texto_windmag.set(f"Wind direction: {dados[6]}")
+    texto_oatc.set(f"OAT: {dados[7]}ºC")
+    texto_baro.set(f"Baro: {dados[8]} qnh")
+    window.after(1000, atualizar_dados)  # Chama a função novamente após x ms
+    
+ """
 
 
 
@@ -589,8 +733,89 @@ def atualizar_knobs():
 
 
 ################ funções de rádio
+
+# função pra abrir a popup de radio frequency manual input
+def abre_rfmi():
+    rfmi = tk.Toplevel(window)
+    rfmi.title("Radio Frequency Manually Input")
+
+    # Lista para armazenar as entradas e botões
+    entries_int = []
+    entries_dec = []
+    botoes_atualizar = []
+
+    # Função para atualizar as variáveis quando o botão é pressionado
+    def atualizar_variaveis(index):
+        valor_int = int(entries_int[index].get())
+        valor_dec = int(entries_dec[index].get())
+        
+        # Atualizar as variáveis
+        if index == 0:
+            com1_active_int.set(valor_int)
+            com1_active_dec.set(valor_dec)
+        elif index == 1:
+            com1_standb_int.set(valor_int)
+            com1_standb_dec.set(valor_dec)
+        elif index == 2:
+            nav1_active_int.set(valor_int)
+            nav1_active_dec.set(valor_dec)
+        elif index == 3:
+            nav1_standb_int.set(valor_int)
+            nav1_standb_dec.set(valor_dec)
+        elif index == 4:
+            com2_active_int.set(valor_int)
+            com2_active_dec.set(valor_dec)
+        elif index == 5:
+            com2_standb_int.set(valor_int)
+            com2_standb_dec.set(valor_dec)
+        elif index == 6:
+            nav2_active_int.set(valor_int)
+            nav2_active_dec.set(valor_dec)
+        elif index == 7:
+            nav2_standb_int.set(valor_int)
+            nav2_standb_dec.set(valor_dec)
+        
+        update_radio_display()
+
+    # Criar entradas e botões
+    for i, (var_int, var_dec) in enumerate([(com1_active_int, com1_active_dec),
+                                            (com1_standb_int, com1_standb_dec),
+                                            (nav1_active_int, nav1_active_dec),
+                                            (nav1_standb_int, nav1_standb_dec),
+                                            (com2_active_int, com2_active_dec),
+                                            (com2_standb_int, com2_standb_dec),
+                                            (nav2_active_int, nav2_active_dec),
+                                            (nav2_standb_int, nav2_standb_dec)]):
+
+        # Criar entradas
+        entry_int = tk.Entry(rfmi, textvariable=var_int)
+        entry_int.grid(row=i, column=0, padx=10, pady=5)
+        entries_int.append(entry_int)
+
+        entry_dec = tk.Entry(rfmi, textvariable=var_dec)
+        entry_dec.grid(row=i, column=1, padx=10, pady=5)
+        entries_dec.append(entry_dec)
+
+        # Criar botões
+        botao_atualizar = tk.Button(rfmi, text=f"Atualizar {i+1}", command=lambda idx=i: atualizar_variaveis(idx))
+        botao_atualizar.grid(row=i, column=2, padx=10, pady=5)
+        botoes_atualizar.append(botao_atualizar)
+
+
+# define a função para, pegar as freq de radio recebidas do sim e setar as variaveis de radio como, depois update display (de radio)
+def forceradiofrom():
+    print("rodou force radio from")
+    global com1si
+    global com1sd
+    
+    com1_standb_int.set(com1si)
+    com1_standb_dec.set(com1sd)
+
+    update_radio_display()
+    
+    
 # Atualiza os campos de texto
-def update_display():
+def update_radio_display():
     print("rodou update display")
     
     com1_active_txt.set(f"{com1_active_int.get():03d}.{com1_active_dec.get():03d}")
@@ -619,13 +844,13 @@ def clicou_intdec(botao):
     
 def clicoubotao_a_nogrupo_01():
     com1_standb_int.set((com1_standb_int.get() - 1) if com1_standb_int.get() != 118 else 136)
-    update_display()
+    update_radio_display()
     if acoplado:
         send_data("COM_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_01():
     com1_standb_int.set((com1_standb_int.get() + 1) if com1_standb_int.get() != 136 else 118)
-    update_display()
+    update_radio_display()
     if acoplado:
         send_data("COM_RADIO_WHOLE_INC")
         
@@ -633,7 +858,7 @@ def clicoubotao_c_nogrupo_01():
     numero_atual = com1_standb_dec.get() # decrementa o decimal da frequencia standby
     novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 1000
     com1_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
         send_data("COM_RADIO_FRACT_DEC")
             
@@ -641,7 +866,7 @@ def clicoubotao_d_nogrupo_01():
     numero_atual = com1_standb_dec.get() # incrementa o decimal da frequencia standby
     novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 1000
     com1_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
         send_data("COM_RADIO_FRACT_INC")
 
@@ -652,32 +877,32 @@ def clicoubotao_d_nogrupo_01():
 
 
 def clicoubotao_a_nogrupo_02():
-    nav1_standb_int.set((nav1_standb_int.get() - 1) if nav1_standb_int.get() != 108 else 118)
-    update_display()
+    nav1_standb_int.set((nav1_standb_int.get() - 1) if nav1_standb_int.get() != 108 else 117)
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_WHOLE_DEC")
+        send_data("NAV1_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_02():
-    nav1_standb_int.set((nav1_standb_int.get() + 1) if nav1_standb_int.get() != 118 else 108)
-    update_display()
+    nav1_standb_int.set((nav1_standb_int.get() + 1) if nav1_standb_int.get() != 117 else 108)
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_WHOLE_INC")
+        send_data("NAV1_RADIO_WHOLE_INC")
         
 def clicoubotao_c_nogrupo_02():
     numero_atual = nav1_standb_dec.get() # decrementa o decimal da frequencia standby
-    novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 100
+    novo_numero = (numero_atual - 5) % 100
     nav1_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_FRACT_DEC")
+        send_data("NAV1_RADIO_FRACT_DEC")
             
 def clicoubotao_d_nogrupo_02():
     numero_atual = nav1_standb_dec.get() # incrementa o decimal da frequencia standby
-    novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 100
+    novo_numero = (numero_atual + 5) % 100
     nav1_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_FRACT_INC")
+        send_data("NAV1_RADIO_FRACT_INC")
 
 
 
@@ -690,44 +915,61 @@ def clicoubotao_d_nogrupo_02():
 
 def clicoubotao_a_nogrupo_03():
     com2_standb_int.set((com2_standb_int.get() - 1) if com2_standb_int.get() != 118 else 136)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_WHOLE_DEC")
+        send_data("COM2_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_03():
     com2_standb_int.set((com2_standb_int.get() + 1) if com2_standb_int.get() != 136 else 118)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_WHOLE_INC")
+        send_data("COM2_RADIO_WHOLE_INC")
         
 def clicoubotao_c_nogrupo_03():
     numero_atual = com2_standb_dec.get() # decrementa o decimal da frequencia standby
     novo_numero = (numero_atual - 10) % 1000 if numero_atual % 100 in [25, 50, 75, 0] else (numero_atual - 5) % 1000
     com2_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_FRACT_DEC")
+        send_data("COM2_RADIO_FRACT_DEC")
             
 def clicoubotao_d_nogrupo_03():
     numero_atual = com2_standb_dec.get() # incrementa o decimal da frequencia standby
     novo_numero = (numero_atual + 10) % 1000 if numero_atual % 100 in [15, 40, 65, 90] else (numero_atual + 5) % 1000
     com2_standb_dec.set(novo_numero)
-    update_display()
+    update_radio_display()
     if acoplado:
-        send_data("COM_RADIO_FRACT_INC")
+        send_data("COM2_RADIO_FRACT_INC")
 
 
+#grupo 04
 def clicoubotao_a_nogrupo_04():
-    print("clicou botao a no grupo 04")
+    nav2_standb_int.set((nav2_standb_int.get() - 1) if nav2_standb_int.get() != 118 else 136)
+    update_radio_display()
+    if acoplado:
+        send_data("NAV2_RADIO_WHOLE_DEC")
     
 def clicoubotao_b_nogrupo_04():
-    print("clicou botao b no grupo 04")    
-
+    nav2_standb_int.set((nav2_standb_int.get() + 1) if nav2_standb_int.get() != 136 else 118)
+    update_radio_display()
+    if acoplado:
+        send_data("NAV2_RADIO_WHOLE_INC")
+        
 def clicoubotao_c_nogrupo_04():
-    print("clicou botao c no grupo 04")
-
+    numero_atual = nav2_standb_dec.get() # decrementa o decimal da frequencia standby
+    novo_numero = (numero_atual - 5) % 100
+    nav2_standb_dec.set(novo_numero)
+    update_radio_display()
+    if acoplado:
+        send_data("NAV2_RADIO_FRACT_DEC")
+            
 def clicoubotao_d_nogrupo_04():
-    print("clicou botao d no grupo 04")  
+    numero_atual = nav2_standb_dec.get() # incrementa o decimal da frequencia standby
+    novo_numero = (numero_atual + 5) % 100
+    nav2_standb_dec.set(novo_numero)
+    update_radio_display()
+    if acoplado:
+        send_data("NAV2_RADIO_FRACT_INC")
 
 
 
@@ -756,9 +998,9 @@ def clicou_swap_com1():
     if acoplado:
         send_data("COM_STBY_RADIO_SWAP")    
 
-# funções do botão swap nav 2 
+# funções do botão swap nav 1 
 def clicou_swap_nav1():
-    print("clicou swap com 1")
+    print("clicou swap nav 1")
     
     # Cached pega as var do Active
     nav1_cached_int.set(nav1_active_int.get())
@@ -777,7 +1019,7 @@ def clicou_swap_nav1():
 
     
     if acoplado:
-        send_data("COM_STBY_RADIO_SWAP")        
+        send_data("NAV1_RADIO_SWAP")        
 
 
 
@@ -802,7 +1044,7 @@ def clicou_swap_com2():
 
     
     if acoplado:
-        send_data("COM_STBY_RADIO_SWAP")                
+        send_data("COM2_RADIO_SWAP")                
 
 # funções do botão swap nav  2 
 def clicou_swap_nav2():
@@ -825,7 +1067,7 @@ def clicou_swap_nav2():
 
     
     if acoplado:
-        send_data("COM_STBY_RADIO_SWAP")                
+        send_data("NAV2_RADIO_SWAP")                
 
 
 # funções transponder
@@ -1168,8 +1410,32 @@ def clicou_send():
 
 
 # main app frame
-frame = tkinter.Frame(window, bg="gray")
+frame = tk.Frame(window, bg="gray")
 frame.grid(row=0, column=0, padx=5, pady=5)
+
+central_frame = mylabelframe(frame, text="Central Frame")
+central_frame.grid(row=2, column=0, sticky="ew")
+
+knobs_frame = mylabelframe(central_frame, text="Knobs Frame")
+knobs_frame.grid(row=0, column=0, sticky="ns")
+
+
+dev_frame = mylabelframe(frame, text="Developers frame")
+dev_frame.grid(row=7, column=0, sticky="news")
+
+calc_frame = mylabelframe(central_frame, text="Calculator Frame")
+calc_frame.grid(row=0, column=1, sticky="NEWS")
+
+console_frame = mylabelframe(frame, text="Console")
+console_frame.grid(row=6, column= 0, sticky="news")
+console_frame.columnconfigure(1, weight=1)
+
+
+botoneira_frame = mylabelframe(frame, text="Botoneira", bg="#3d200a", fg="white")
+botoneira_frame.grid(row=3, column=0, sticky="ew")
+
+info_frame = mylabelframe(frame, text="Information Frame")
+info_frame.grid(row=1, column=0, sticky="we")
 
 ###################################### INFO - FRAME
 
@@ -1177,39 +1443,37 @@ frame.grid(row=0, column=0, padx=5, pady=5)
 
 ################ info frame - interface
 
-info_frame = mylabelframe(frame, text="Information Frame")
-info_frame.grid(row=6, column=0, sticky="we")
+
 
 # AC INFO - FRAME
 
 ac_info_frame =mylabelframe(info_frame, text="Aircraft Info")
 ac_info_frame.grid(row=0, column=0)
 
-airspeed_label = tkinter.Label(ac_info_frame, text="Airspeed")
-airspeed_label.grid(row=0, column=0)
-
 
 # criar campo de texto atualizavel - ac info
-label_altitude = tkinter.Label(ac_info_frame, textvariable=texto_altitude)
+label_altitude = tk.Label(ac_info_frame, textvariable=texto_altitude)
 label_altitude.grid(row=0, column=0)
 
 
-label_ias = tkinter.Label(ac_info_frame, textvariable=texto_ias)
+label_ias = tk.Label(ac_info_frame, textvariable=texto_ias)
 label_ias.grid(row=1, column=0)
 
 
-label_heading = tkinter.Label(ac_info_frame, textvariable=texto_heading)
+label_heading = tk.Label(ac_info_frame, textvariable=texto_heading)
 label_heading.grid(row=2, column=0)
 
 
-label_fuel = tkinter.Label(ac_info_frame, textvariable=texto_fuel)
+label_fuel = tk.Label(ac_info_frame, textvariable=texto_fuel)
 label_fuel.grid(row=3, column=0)
+
+airspeed_label = tk.Label(ac_info_frame, text="Airspeed")
+airspeed_label.grid(row=4, column=0)
 
 # configura o campo de texto do ac info 
 for widget in ac_info_frame.winfo_children():
-    widget.configure(bg="#1A1A1A", fg="yellow", font=("Verdana", 7))
+    widget.configure(font=("Verdana", 7))
     widget.grid_configure(pady=0, sticky="w")
-
 
 # WEA INFO - FRAME
 
@@ -1217,29 +1481,29 @@ wea_info_frame = mylabelframe(info_frame, text="Weather Information Info")
 wea_info_frame.grid(row=0, column=1)
 
 # criar campo de texto atualizavel - wea info
-label_hora = tkinter.Label(wea_info_frame, textvariable=texto_hora)
+label_hora = tk.Label(wea_info_frame, textvariable=texto_hora)
 label_hora.grid(row=0, column=0)
 
 
-label_windspeed = tkinter.Label(wea_info_frame, textvariable=texto_windspeed)
+label_windspeed = tk.Label(wea_info_frame, textvariable=texto_windspeed)
 label_windspeed.grid(row=1, column=0)
 
 
-label_windmag = tkinter.Label(wea_info_frame, textvariable=texto_windmag)
+label_windmag = tk.Label(wea_info_frame, textvariable=texto_windmag)
 label_windmag.grid(row=2, column=0)
 ########## corrigir o windmag, esta pegando wind true
 
 
-label_oatc = tkinter.Label(wea_info_frame, textvariable=texto_oatc)
+label_oatc = tk.Label(wea_info_frame, textvariable=texto_oatc)
 label_oatc.grid(row=3, column=0)
 
 
-label_baro = tkinter.Label(wea_info_frame, textvariable=texto_baro)
+label_baro = tk.Label(wea_info_frame, textvariable=texto_baro)
 label_baro.grid(row=4, column=0)
 
 # configura o campo de texto do we info 
 for widget in wea_info_frame.winfo_children():
-    widget.configure(bg="#1A1A1A", fg="yellow", font=("Verdana", 7))
+    widget.configure(font=("Verdana", 7))
     widget.grid_configure(pady=0, sticky="w")
 
 
@@ -1251,8 +1515,14 @@ for widget in wea_info_frame.winfo_children():
 fl_info_frame = mylabelframe(info_frame, text="Flight Information")
 fl_info_frame.grid(row=0, column=2)
 
-elapsedtime_label = tkinter.Label(fl_info_frame, text="Elapsed Time")
+elapsedtime_label = tk.Label(fl_info_frame, text="Elapsed Time")
 elapsedtime_label.grid(row=0, column=0)
+
+# configura o campo de texto do we info 
+for widget in fl_info_frame.winfo_children():
+    widget.configure(font=("Verdana", 7))
+    widget.grid_configure(pady=0, sticky="w")
+
 
 # pading 
 for widget in info_frame.winfo_children():
@@ -1268,21 +1538,54 @@ var_info_frame.grid(row=0, column=3,  sticky="news")
 
 
 # criar campo de texto atualizavel - var info
-com1_active_int_label = tkinter.Label(var_info_frame, textvariable=com1_active_txt)
-
+nav1_active_int_label = tk.Label(var_info_frame, textvariable=nav1_active_int)
+nav1_active_dec_label = tk.Label(var_info_frame, textvariable=nav1_active_dec)
+nav1_active_txt_label = tk.Label(var_info_frame, textvariable=nav1_active_txt)
+nav1_standb_int_label = tk.Label(var_info_frame, textvariable=nav1_standb_int)
+nav1_standb_dec_label = tk.Label(var_info_frame, textvariable=nav1_standb_dec)
+nav1_standb_txt_label = tk.Label(var_info_frame, textvariable=nav1_standb_txt)
 
 
 # Por no grid as var infos
-com1_active_int_label.grid(row=0, column=0)
-
-
-
+nav1_active_int_label.grid(row=0, column=0)
+nav1_active_dec_label.grid(row=1, column=0)
+nav1_active_txt_label.grid(row=2, column=0)
+nav1_standb_int_label.grid(row=3, column=0)
+nav1_standb_dec_label.grid(row=4, column=0)
+nav1_standb_txt_label.grid(row=5, column=0)
 
 
 # configura o campo de texto do var info 
 for widget in var_info_frame.winfo_children():
-    widget.configure(bg="#1A1A1A", fg="yellow", font=("Verdana", 7))
+    widget.configure(font=("Verdana", 7))
     widget.grid_configure(pady=0, sticky="w")
+
+
+
+#app info frame
+app_info_frame = mylabelframe(info_frame, text="App Info")
+app_info_frame.grid(row=0, column=4)
+
+memory_percent_label = tk.Label(app_info_frame, text="RAM (%):")
+memory_megabytes_label = tk.Label(app_info_frame, text="RAM (MB):")
+network_total_label = tk.Label(app_info_frame, text="Net Total(Bytes):")
+network_sent_label = tk.Label(app_info_frame, text="Net send (b):")
+network_recv_label = tk.Label(app_info_frame, text="Net Rcv (b):")
+ping_remote_label = tk.Label(app_info_frame, text="Ping DNS:")
+ping_local_label = tk.Label(app_info_frame, text="Ping Gatew:")
+memory_percent_label.grid(row=0, column=0)  
+memory_megabytes_label.grid(row=1, column=0)
+network_total_label.grid(row=2, column=0)
+network_sent_label.grid(row=3, column=0)
+network_recv_label.grid(row=4, column=0)
+ping_remote_label.grid(row=5, column=0)
+ping_local_label.grid(row=6, column=0)
+
+# configura o campo de texto do ac info 
+for widget in app_info_frame.winfo_children():
+    widget.configure(font=("Verdana", 7))
+    widget.grid_configure(pady=0, sticky="w")
+
 
 
 
@@ -1331,8 +1634,7 @@ for widget in var_info_frame.winfo_children():
 
 
 ###################################### CENTRAL - FRAME
-central_frame = mylabelframe(frame, text="Central Frame")
-central_frame.grid(row=2, column=0, sticky="ew")
+
 
 
 
@@ -1342,19 +1644,17 @@ central_frame.grid(row=2, column=0, sticky="ew")
 
 
 
-knobs_frame = mylabelframe(central_frame, text="Knobs Frame")
-knobs_frame.grid(row=0, column=0, sticky="ns")
 
 
 
-aj_compass_label = tkinter.Label(knobs_frame, text="hdg")
+aj_compass_label = tk.Label(knobs_frame, text="hdg")
 aj_compass_label.grid(row=0, column=1)
-aj_compass_spin = tkinter.Spinbox(knobs_frame, from_=1, to=360, width=10)
+aj_compass_spin = tk.Spinbox(knobs_frame, from_=1, to=360, width=10)
 aj_compass_spin.grid(row=1, column=1)
 
-sca_pan = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
+sca_pan = tk.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
 sca_pan.grid(row=2, column=1)
-sca_rad = tkinter.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
+sca_rad = tk.Scale(knobs_frame, orient="horizontal", bg="black", fg="white")
 sca_rad.grid(row=3, column=1)
 
 knob_pan_menos = knobmenos(knobs_frame)
@@ -1399,16 +1699,30 @@ for widget in knobs_frame.winfo_children():
 radios_frame = radiolabelframe(central_frame, text="Radios Frame")
 radios_frame.grid(row=0, column=2)
 
-# Radio 1 
+
+
+radio_buttons = radiolabelframe(radios_frame, bg="black", fg="blue", text="botões radio")
+radio_buttons.grid(row=0, column=0)
 
 radio_01_frame = radiolabelframe(radios_frame, text="Radio 01")
-radio_01_frame.grid(row=0, column=0)
+radio_01_frame.grid(row=1, column=0)
+
+radio_02_frame = radiolabelframe(radios_frame, text="Radio 02")
+radio_02_frame.grid(row=2, column=0)
 
 
+radio_03_frame = radiolabelframe(radios_frame, text="Transponder")
+radio_03_frame.grid(row=3, column=0, sticky="news")
 
 
+bot_radiomenu = tk.Button(dev_frame, text="FMI", command=abre_rfmi)
+bot_radiomenu.grid(row=0, column=10)
+
+bot_force = tk.Button(dev_frame, text="FRF", command=forceradiofrom)
+bot_force.grid(row=0, column=11)
 
 
+# Radio 1 
 # Frame - comm 1 - active
 com1_active_frame = radiolabelframe(radio_01_frame, text="Comm 01 - Active")
 com1_active_frame.grid(row=0, column=0)
@@ -1426,7 +1740,7 @@ com1_standb_frame.grid(row=0, column=1)
 com1_standb_display = radiodisplay(com1_standb_frame, textvariable=com1_standb_txt)
 com1_standb_display.grid(row=0, column=0)
 
-com1_standb_buttons_frame = tkinter.Frame(com1_standb_frame, bg="black")
+com1_standb_buttons_frame = tk.Frame(com1_standb_frame, bg="black")
 com1_standb_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância do grupo de botões
@@ -1461,7 +1775,7 @@ nav1_standby_frame.grid(row=0, column=3)
 nav1_standby_display = radiodisplay(nav1_standby_frame, textvariable=nav1_standb_txt)
 nav1_standby_display.grid(row=0, column=0)
 
-nav1_standby_buttons_frame = tkinter.Frame(nav1_standby_frame, bg="black")
+nav1_standby_buttons_frame = tk.Frame(nav1_standby_frame, bg="black")
 nav1_standby_buttons_frame.grid(row=1, column=0)
 
 
@@ -1484,8 +1798,7 @@ instancia_02_do_grupo.botaod.config(command=clicoubotao_d_nogrupo_02)
 
 # Radio 2
 
-radio_02_frame = radiolabelframe(radios_frame, text="Radio 02")
-radio_02_frame.grid(row=1, column=0)
+
 
 # Frame - comm 2 - active
 com2_active_frame = radiolabelframe(radio_02_frame, text="Comm 02 - Active")
@@ -1504,7 +1817,7 @@ com2_standby_frame.grid(row=0, column=1)
 com2_standby_display = radiodisplay(com2_standby_frame, textvariable=com2_standb_txt)
 com2_standby_display.grid(row=0, column=0)
 
-com2_standby_buttons_frame = tkinter.Frame(com2_standby_frame, bg="black")
+com2_standby_buttons_frame = tk.Frame(com2_standby_frame, bg="black")
 com2_standby_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância dos botoes de seletora frequencia
@@ -1533,7 +1846,7 @@ nav2_standby_frame.grid(row=0, column=3)
 nav2_standby_display = radiodisplay(nav2_standby_frame, textvariable=nav2_standb_txt)
 nav2_standby_display.grid(row=0, column=0)
 
-nav2_standby_buttons_frame = tkinter.Frame(nav2_standby_frame, bg="black")
+nav2_standby_buttons_frame = tk.Frame(nav2_standby_frame, bg="black")
 nav2_standby_buttons_frame.grid(row=1, column=0)
 
 # Criação da instância do grupo de botões
@@ -1562,8 +1875,6 @@ for widget in radios_frame.winfo_children():
 
 ############## TRANSPONDER
 
-radio_03_frame = radiolabelframe(radios_frame, text="Transponder")
-radio_03_frame.grid(row=3, column=0, sticky="news")
 
 # cria e empacota subframes no transponder
 radio_03_subframe_0 = radiolabelframe(radio_03_frame, text="seletor")
@@ -1633,16 +1944,16 @@ digitsel = [digit_1_sel, digit_1_sel, digit_2_sel, digit_2_sel, digit_3_sel, dig
 
 # variaveis
 
-velocidade_var = tkinter.IntVar(value=90)   # Valor inicial da velocidade
-distance_var = tkinter.IntVar(value=25)   # Valor inicial da distancia
-temporota_var = tkinter.IntVar(value=10)   # Valor inicial do tempo em rota do trecho
+velocidade_var = tk.IntVar(value=90)   # Valor inicial da velocidade
+distance_var = tk.IntVar(value=25)   # Valor inicial da distancia
+temporota_var = tk.IntVar(value=10)   # Valor inicial do tempo em rota do trecho
 
 # funcoes - define função botão calculate
 def onclick_button_calculate():
     distance = float(distance_entry.get())
     velocidade = float(velocidade_entry.get())
     temporota = distance * 60 / velocidade
-    temporota_entry.delete(0, tkinter.END)  # Limpa o campo de entrada
+    temporota_entry.delete(0, tk.END)  # Limpa o campo de entrada
     temporota_entry.insert(0, "{:.2f}".format(temporota))
 
   
@@ -1650,26 +1961,25 @@ def onclick_button_calculate():
 
 # interface
 
-calc_frame = mylabelframe(central_frame, text="Calculator Frame")
-calc_frame.grid(row=0, column=1, sticky="NEWS")
 
-velocidade_label = tkinter.Label(calc_frame, text="Ias: ")
+
+velocidade_label = tk.Label(calc_frame, text="Ias: ")
 velocidade_label.grid(row=0, column=0)
-velocidade_entry = tkinter.Entry(calc_frame, textvariable=velocidade_var, width=10)
+velocidade_entry = tk.Entry(calc_frame, textvariable=velocidade_var, width=10)
 velocidade_entry.grid(row=0, column=1)
 
-distance_label = tkinter.Label(calc_frame, text="NM: ")
+distance_label = tk.Label(calc_frame, text="NM: ")
 distance_label.grid(row=1, column=0)
-distance_entry = tkinter.Entry(calc_frame, textvariable=distance_var, width=10)
+distance_entry = tk.Entry(calc_frame, textvariable=distance_var, width=10)
 distance_entry.grid(row=1, column=1)
 
-temporota_label = tkinter.Label(calc_frame, text="ETA: ")
+temporota_label = tk.Label(calc_frame, text="ETA: ")
 temporota_label.grid(row=2, column=0)
-temporota_entry = tkinter.Entry(calc_frame, width=10)
+temporota_entry = tk.Entry(calc_frame, width=10)
 temporota_entry.grid(row=2, column=1)
 
 
-button_calculate = tkinter.Button(calc_frame, text="Calc", command=onclick_button_calculate)
+button_calculate = tk.Button(calc_frame, text="Calc", command=onclick_button_calculate)
 button_calculate.grid(row=3, column=0, sticky="news")
 
 
@@ -1704,8 +2014,6 @@ for widget in central_frame.winfo_children():
 
 ################ interface botoneira
 
-botoneira_frame = mylabelframe(frame, text="Botoneira", bg="#3d200a", fg="white")
-botoneira_frame.grid(row=3, column=0, sticky="ew")
 
 # criar instancias dos botões
 bot_pbk = botaogrand(botoneira_frame)
@@ -1801,15 +2109,15 @@ else:
 
 """ 
 #### Cria label do estado dos botoes 
-label_alt = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=alt_tkin, font=("verdana", 6))
-label_bat = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=bat_tkin, font=("verdana", 6))
-label_dom = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=dom_tkin, font=("verdana", 6))
-label_pit = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=pit_tkin, font=("verdana", 6))
-label_nav = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=nav_tkin, font=("verdana", 6))
-label_stb = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=stb_tkin, font=("verdana", 6))
-label_bcn = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=bcn_tkin, font=("verdana", 6))
-label_tax = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=tax_tkin, font=("verdana", 6))
-label_ldg = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=ldg_tkin, font=("verdana", 6))
+label_alt = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=alt_tkin, font=("verdana", 6))
+label_bat = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=bat_tkin, font=("verdana", 6))
+label_dom = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=dom_tkin, font=("verdana", 6))
+label_pit = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=pit_tkin, font=("verdana", 6))
+label_nav = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=nav_tkin, font=("verdana", 6))
+label_stb = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=stb_tkin, font=("verdana", 6))
+label_bcn = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=bcn_tkin, font=("verdana", 6))
+label_tax = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=tax_tkin, font=("verdana", 6))
+label_ldg = tk.Label(botoneira_frame, bg="#3d200a", fg="white", textvariable=ldg_tkin, font=("verdana", 6))
 
 #empacota as labels
 label_alt.grid(row=3, column=0)
@@ -1823,15 +2131,15 @@ label_tax.grid(row=3, column=7)
 label_ldg.grid(row=3, column=8)
 
 #### Cria label do estado dos botoes 
-label_alt_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_bat_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_dom_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_pit_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_nav_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_stb_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_bcn_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_tax_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
-label_ldg_is = tkinter.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_alt_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_bat_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_dom_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_pit_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_nav_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_stb_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_bcn_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_tax_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
+label_ldg_is = tk.Label(botoneira_frame, bg="#3d200a", fg="white", text="b.is", font=("verdana", 6))
 
 #empacota as labels
 label_alt_is.grid(row=4, column=0)
@@ -1854,53 +2162,50 @@ label_ldg_is.grid(row=4, column=8)
 ######################################### CONSOLE
 
 
-console_frame = mylabelframe(frame, text="Console")
-console_frame.grid(row=5, column= 0, sticky="news")
-console_frame.columnconfigure(1, weight=1)
 
-console_entry = tkinter.Entry(console_frame, bg="black", fg="#53f73e", text=">>>>>>")
+
+console_entry = tk.Entry(console_frame, bg="black", fg="#53f73e", text=">>>>>>")
 console_entry.grid(row=3, column=0, sticky="news", columnspan=2)
 console_entry.insert(1, ">> Settings Console >>")
 
-console_button = tkinter.Button(console_frame, text="SEND", command=clicou_send)
+console_button = tk.Button(console_frame, text="SEND", command=clicou_send)
 console_button.grid(row=3, column=2)
 
 
 
 ################## interface developers frame
-dev_frame = mylabelframe(frame, text="Developers frame")
-dev_frame.grid(row=4, column=0, sticky="news")
+
 
 
 
 
 # checkbox bypass
-checkbox_bypass_sim = tkinter.Checkbutton(dev_frame, text="ByPass SimConection", variable=bypass_sim_tkbo, state="disabled")
+checkbox_bypass_sim = tk.Checkbutton(dev_frame, text="ByPass SimConection", variable=bypass_sim_tkbo, state="disabled")
 checkbox_bypass_sim.grid(row=0, column=0, sticky="news")
 
 # cria checkbutton acoplado
-checkbutton_acoplado = tkinter.Checkbutton(dev_frame, variable=acoplado, text="App Acoplado ao SIM", command=alterna_acoplado)
-checkbutton_acoplado.grid(row=0, column=1)
+checkbutton_acoplado = tk.Checkbutton(knobs_frame, variable=acoplado, text="Acoplado", command=alterna_acoplado)
+checkbutton_acoplado.grid(row=10, column=1)
 
 # botão testeralpha 
-button_testeralpha = tkinter.Button(dev_frame, text="Tester Alpha", command=onclick_testeralpha)
-button_testeralpha.grid(row=0, column=2, sticky="w")
+button_testeralpha = tk.Button(knobs_frame, text="Tester Alpha", command=reconectar)
+button_testeralpha.grid(row=11, column=1, sticky="w")
 
 # botão testerbeta
-button_testerbeta = tkinter.Button(dev_frame, text="Tester Beta", command=onclick_testerbeta)
-button_testerbeta.grid(row=0, column=3, sticky="w")
+button_testerbeta = tk.Button(knobs_frame, text="Tester Beta", command=onclick_testerbeta)
+button_testerbeta.grid(row=12, column=1, sticky="w")
 
 # botão testercharlie
-button_testercharlie = tkinter.Button(dev_frame, text="Tester charlie", command=onclick_testercharlie)
+button_testercharlie = tk.Button(dev_frame, text="Tester charlie", command=onclick_testercharlie)
 button_testercharlie.grid(row=0, column=4, sticky="w")
 
 # botão testerbeta
-button_testerdelta = tkinter.Button(dev_frame, text="Tester delta", command=onclick_testerdelta)
+button_testerdelta = tk.Button(dev_frame, text="Tester delta", command=onclick_testerdelta)
 button_testerdelta.grid(row=0, column=5, sticky="w")
 
 
 #cria label
-label_acoplado = tkinter.Label(dev_frame, text="decoy", fg="red")
+label_acoplado = tk.Label(dev_frame, text="decoy", fg="red")
 label_acoplado.grid(row=0, column=6)
 
 
@@ -1950,9 +2255,16 @@ for widget in frame.winfo_children():
 # Inicia uma thread para receber dados do servidor em segundo plano
 if bypass_net == 0:
     threading.Thread(target=receive_data, daemon=True).start()
+    
 
-update_display()
+if bypass_sim == 0:
+    atualizar_dados()
+
+
+update_radio_display()
 puxaestadosdosim()
-atualizar_dados()
+
+update_app_infos(window, memory_percent_label, memory_megabytes_label, network_total_label,
+                  network_sent_label, network_recv_label, ping_remote_label, ping_local_label)
 
 window.mainloop()

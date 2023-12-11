@@ -1,4 +1,5 @@
 # This version is: E
+# add retry caso a conexão caia, caso erro de OS, e caso simconnect falhe. 
 
 # Configurações básicas
 bypass_sim = 0 # Caso SIM, rodar o app sem a necessidade do Simulador rodando
@@ -88,7 +89,24 @@ def send_data_to_client(client_socket):
             'windspeed': dados[5],
             'windmag': dados[6],
             'oatc': dados[7],
-            'baro': dados[8]
+            'baro': dados[8],
+            'com1si': dados[9],
+            'com1sd': dados[10],
+            'com1ai': dados[11],
+            'com1ad': dados[12],
+            'nav1si': dados[13],
+            'nav1sd': dados[14],
+            'nav1ai': dados[15],
+            'nav1ad': dados[16],
+            'com2si': dados[17],
+            'com2sd': dados[18],
+            'com2ai': dados[19],
+            'com2ad': dados[20],
+            'nav2si': dados[21],
+            'nav2sd': dados[22],
+            'nav2ai': dados[23],
+            'nav2ad': dados[24],
+            
         }
 
         # Converte o dicionário para uma string JSON
@@ -101,7 +119,8 @@ def send_data_to_client(client_socket):
         client_socket.send(data_to_send.encode('utf-8'))
 
         # Aguarda por algum tempo antes de enviar os próximos dados
-        time.sleep(1)
+        # ps o mx linux não aguenta muito rápido
+        time.sleep(2)
 
 # Função para aceitar conexões e iniciar uma thread para cada cliente
 def accept_connections():
@@ -150,13 +169,35 @@ def obter_dados():
     windmag = int(aq.get("AMBIENT_WIND_DIRECTION"))
     oatc = int(aq.get("AMBIENT_TEMPERATURE"))
     baro = int(aq.get("BAROMETER_PRESSURE"))
-        
+    
+    com1s = aq.get("COM_STANDBY_FREQUENCY:1")
+    com1si, com1sd = (int(com1s), int(round(com1s % 1, 3) * 1000)) if com1s is not None else (None, None)
 
-    return altitude, ias, heading, fuel, hora, windspeed, windmag, oatc, baro
+    com1a = aq.get("COM_ACTIVE_FREQUENCY:1")
+    com1ai, com1ad = (int(com1a), int(round(com1a % 1, 3) * 1000)) if com1a is not None else (None, None)
+
+    nav1s = aq.get("NAV_STANDBY_FREQUENCY:1")
+    nav1si, nav1sd = (int(nav1s), int(round(nav1s % 1, 3) * 100)) if nav1s is not None else (None, None)
+
+    nav1a = aq.get("NAV_ACTIVE_FREQUENCY:1")
+    nav1ai, nav1ad = (int(nav1a), int(round(nav1a % 1, 3) * 100)) if nav1a is not None else (None, None)
+
+    com2s = aq.get("COM_STANDBY_FREQUENCY:2")
+    com2si, com2sd = (int(com2s), int(round(com2s % 1, 3) * 1000)) if com2s is not None else (None, None)
+
+    com2a = aq.get("COM_ACTIVE_FREQUENCY:2")
+    com2ai, com2ad = (int(com2a), int(round(com2a % 1, 3) * 1000)) if com2a is not None else (None, None)
+
+    nav2s = aq.get("NAV_STANDBY_FREQUENCY:2")
+    nav2si, nav2sd = (int(nav2s), int(round(nav2s % 1, 3) * 100)) if nav2s is not None else (None, None)
+
+    nav2a = aq.get("NAV_ACTIVE_FREQUENCY:2")
+    nav2ai, nav2ad = (int(nav2a), int(round(nav2a % 1, 3) * 100)) if nav2a is not None else (None, None)
+
+    return altitude, ias, heading, fuel, hora, windspeed, windmag, oatc, baro, com1si, com1sd, com1ai, com1ad, nav1si, nav1sd, nav1ai, nav1ad, com2si, com2sd, com2ai, com2ad, nav2si, nav2sd, nav2ai, nav2ad
 
 
-
-# Função para atualizar os campos de texto
+# Função para atualizar os campos de texto (interface do server)
 def atualizar_dados():
     if bypass_sim == 0:
         dados = obter_dados()
@@ -169,7 +210,7 @@ def atualizar_dados():
         texto_windmag.set(f"Wind direction: {dados[6]}")
         texto_oatc.set(f"OAT: {dados[7]}ºC")
         texto_baro.set(f"Baro: {dados[8]} qnh")
-        window.after(50, atualizar_dados)  # Chama a função novamente após x ms
+        window.after(500, atualizar_dados)  # Chama a função novamente após x ms
     else:
         print("BypassSim:", bypass_sim)        
         
